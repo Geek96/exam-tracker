@@ -7,17 +7,16 @@ export default async function handler(req) {
   try { body = await req.json(); } catch { return errJson(400, 'Bad Request'); }
 
   try {
-    const { provider = 'gemini', courseName, subject, messages = [] } = body;
-
-    if (!messages.length) return errJson(400, '消息列表不能为空');
+    const { provider = 'gemini', courseName, subject, messages } = body;
+    const msgs = Array.isArray(messages) ? messages : [];
 
     const system = `你是一名专业的考试备考助手，擅长制定科学高效的复习计划，并能根据用户的追问进行深入解答。
 课程：${courseName || '未命名'}${subject ? `（${subject}）` : ''}
 请用 Markdown 格式回复，使用中文。`;
 
     return provider === 'claude'
-      ? handleClaude(system, messages)
-      : handleGemini(system, messages);
+      ? handleClaude(system, msgs)
+      : handleGemini(system, msgs);
 
   } catch (err) {
     return errJson(500, `服务器错误：${err.message}`);
