@@ -199,6 +199,10 @@ function buildSectionEl(sec, ci, si) {
         course.chapters[ci].sections[si].subsections[bi].done = e.target.checked;
         persist(); renderChapters(); renderProgress();
       });
+      subRow.addEventListener('click', (e) => {
+        if (e.target.classList.contains('subsection-check')) return;
+        subRow.querySelector('.subsection-check').click();
+      });
       subList.appendChild(subRow);
     });
 
@@ -223,6 +227,10 @@ function buildSectionEl(sec, ci, si) {
       course.chapters[ci].sections[si].subsections.forEach(s => s.done = checked);
       persist(); renderChapters(); renderProgress();
     });
+    row.addEventListener('click', (e) => {
+      if (e.target.classList.contains('section-check') || e.target.classList.contains('chapter-toggle')) return;
+      row.querySelector('.section-check').click();
+    });
     return wrapper;
   }
 
@@ -230,6 +238,10 @@ function buildSectionEl(sec, ci, si) {
   row.querySelector('.section-check').addEventListener('change', (e) => {
     course.chapters[ci].sections[si].done = e.target.checked;
     persist(); renderChapters(); renderProgress();
+  });
+  row.addEventListener('click', (e) => {
+    if (e.target.classList.contains('section-check')) return;
+    row.querySelector('.section-check').click();
   });
   return row;
 }
