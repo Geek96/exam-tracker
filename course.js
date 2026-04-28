@@ -913,6 +913,152 @@ btnReset.addEventListener('click', function () {
   }
 });
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  AI Study Plan
+// ══════════════════════════════════════════════════════════════════════════════
+const aiModal       = document.getElementById('aiModal');
+const aiSetupPanel  = document.getElementById('aiSetupPanel');
+const aiResultPanel = document.getElementById('aiResultPanel');
+const aiResultBody  = document.getElementById('aiResultBody');
+const aiResultTitle = document.getElementById('aiResultTitle');
+const aiDaysLeft    = document.getElementById('aiDaysLeft');
+const aiHoursPerDay = document.getElementById('aiHoursPerDay');
+const aiReviewGuide = document.getElementById('aiReviewGuide');
+let aiAbortCtrl     = null;
+
+function openAIModal() {
+  const d = daysUntil(course.examDate);
+  if (d !== null && d > 0) aiDaysLeft.value = d;
+  showAISetup();
+  aiModal.classList.add('open');
+}
+function closeAIModal() {
+  if (aiAbortCtrl) { aiAbortCtrl.abort(); aiAbortCtrl = null; }
+  aiModal.classList.remove('open');
+}
+function showAISetup() {
+  aiSetupPanel.style.display = 'flex';
+  aiResultPanel.style.display = 'none';
+}
+function showAIResult() {
+  aiSetupPanel.style.display = 'none';
+  aiResultPanel.style.display = 'flex';
+}
+
+document.getElementById('btnAIPlan').addEventListener('click', openAIModal);
+document.getElementById('aiModalClose').addEventListener('click', closeAIModal);
+document.getElementById('aiResultClose').addEventListener('click', closeAIModal);
+document.getElementById('aiCancelBtn').addEventListener('click', closeAIModal);
+document.getElementById('aiBtnDone').addEventListener('click', closeAIModal);
+document.getElementById('aiBtnBack').addEventListener('click', () => {
+  if (aiAbortCtrl) { aiAbortCtrl.abort(); aiAbortCtrl = null; }
+  showAISetup();
+});
+aiModal.addEventListener('click', e => { if (e.target === aiModal) closeAIModal(); });
+
+document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
+  const daysLeft    = parseFloat(aiDaysLeft.value)    || 7;
+  const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
+  const reviewGuide = aiReviewGuide.value.trim();
+
+  showAIResult();
+  aiResultTitle.textContent = '正在生成…';
+  aiResultBody.innerHTML = '<div class="ai-generating"><span class="ai-spinner"></span>正在规划复习计划，请稍候…</div>';
+
+  aiAbortCtrl = new AbortController();
+
+  try {
+    const res = await fetch('/api/study-plan', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: aiAbortCtrl.signal,
+      body: JSON.stringify({
+        courseName: course.name,
+        subject:    course.subject,
+        chapters:   course.chapters,
+        reviewGuide,
+        daysLeft,
+        hoursPerDay,
+      }),
+    });
+
+    if (!res.ok) {
+      const msg = await res.text();
+      aiResultBody.innerHTML = `<div class="ai-error">生成失败（${res.status}）：${escHtml(msg)}</div>`;
+      aiResultTitle.textContent = '生成失败';
+      return;
+    }
+
+    let fullText = '';
+    aiResultBody.innerHTML = '';
+    const reader = res.body.getReader();
+    const dec    = new TextDecoder();
+    let buf      = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6);
+        if (raw === '[DONE]') continue;
+        try {
+          const ev = JSON.parse(raw);
+          if (ev.t) {
+            fullText += ev.t;
+            aiResultBody.innerHTML = mdToHtml(fullText) + '<span class="ai-cursor"></span>';
+            aiResultBody.scrollTop = aiResultBody.scrollHeight;
+          }
+        } catch { /* ignore */ }
+      }
+    }
+
+    aiResultBody.innerHTML = mdToHtml(fullText);
+    aiResultTitle.textContent = '复习计划';
+    aiAbortCtrl = null;
+
+  } catch (err) {
+    if (err.name === 'AbortError') return;
+    aiResultBody.innerHTML = `<div class="ai-error">网络错误：${escHtml(err.message)}</div>`;
+    aiResultTitle.textContent = '生成失败';
+  }
+});
+
+function mdToHtml(md) {
+  const lines = md.split('\n');
+  const out   = [];
+  let inList  = false;
+
+  for (const raw of lines) {
+    const line = raw
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    if (/^## /.test(raw)) {
+      if (inList) { out.push('</ul>'); inList = false; }
+      out.push(`<h2>${line.replace(/^## /, '')}</h2>`);
+    } else if (/^### /.test(raw)) {
+      if (inList) { out.push('</ul>'); inList = false; }
+      out.push(`<h3>${line.replace(/^### /, '')}</h3>`);
+    } else if (/^- /.test(raw)) {
+      if (!inList) { out.push('<ul>'); inList = true; }
+      out.push(`<li>${line.replace(/^- /, '')}</li>`);
+    } else if (raw.trim() === '') {
+      if (inList) { out.push('</ul>'); inList = false; }
+    } else {
+      if (inList) { out.push('</ul>'); inList = false; }
+      out.push(`<p>${line}</p>`);
+    }
+  }
+  if (inList) out.push('</ul>');
+  return out.join('');
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderHeader();
 renderChapters();
