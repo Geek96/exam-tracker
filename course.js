@@ -1062,6 +1062,15 @@ const aiHoursPerDay = document.getElementById('aiHoursPerDay');
 const aiReviewGuide = document.getElementById('aiReviewGuide');
 let aiAbortCtrl     = null;
 let aiGuideContent  = '';  // populated by PDF or URL tabs; text tab reads textarea directly
+let aiProvider      = 'gemini';
+
+document.querySelectorAll('.ai-provider-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ai-provider-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    aiProvider = btn.dataset.provider;
+  });
+});
 
 function openAIModal() {
   const d = daysUntil(course.examDate);
@@ -1217,6 +1226,7 @@ document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
         reviewGuide,
         daysLeft,
         hoursPerDay,
+        provider:   aiProvider,
       }),
     });
 

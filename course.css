@@ -861,6 +861,30 @@
   padding: 16px 0;
 }
 
+/* ── AI Provider Toggle ── */
+.ai-provider-btns {
+  display: flex;
+  gap: 4px;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 3px;
+}
+.ai-provider-btn {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.ai-provider-btn:hover { color: var(--text); }
+.ai-provider-btn.active[data-provider="gemini"] { background: #1a7f5a; color: #fff; }
+.ai-provider-btn.active[data-provider="claude"]  { background: #c96a2a; color: #fff; }
+
 /* ── AI Guide Tabs ── */
 .ai-guide-wrap {
   display: flex;
