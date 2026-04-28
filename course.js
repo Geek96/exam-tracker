@@ -996,6 +996,7 @@ async function renderMaterials() {
       </div>`;
     card.querySelector('.btn-mat-open').addEventListener('click', e => {
       e.stopPropagation();
+      if (f.type === 'text/plain') { openTextEditModal(f); return; }
       const blob = new Blob([f.data], { type: f.type });
       const url  = URL.createObjectURL(blob);
       window.open(url, '_blank');
@@ -1052,17 +1053,19 @@ renderMaterials();
 // ══════════════════════════════════════════════════════════════════════════════
 //  AI Study Plan
 // ══════════════════════════════════════════════════════════════════════════════
-const aiModal       = document.getElementById('aiModal');
-const aiSetupPanel  = document.getElementById('aiSetupPanel');
-const aiResultPanel = document.getElementById('aiResultPanel');
-const aiResultBody  = document.getElementById('aiResultBody');
-const aiResultTitle = document.getElementById('aiResultTitle');
-const aiDaysLeft    = document.getElementById('aiDaysLeft');
-const aiHoursPerDay = document.getElementById('aiHoursPerDay');
-const aiReviewGuide = document.getElementById('aiReviewGuide');
-let aiAbortCtrl     = null;
-let aiGuideContent  = '';  // populated by PDF or URL tabs; text tab reads textarea directly
-let aiProvider      = 'gemini';
+const aiModal        = document.getElementById('aiModal');
+const aiSetupPanel   = document.getElementById('aiSetupPanel');
+const aiChatPanel    = document.getElementById('aiChatPanel');
+const aiChatMessages = document.getElementById('aiChatMessages');
+const aiChatInput    = document.getElementById('aiChatInput');
+const aiDaysLeft     = document.getElementById('aiDaysLeft');
+const aiHoursPerDay  = document.getElementById('aiHoursPerDay');
+const aiReviewGuide  = document.getElementById('aiReviewGuide');
+let aiAbortCtrl      = null;
+let aiGuideContent   = '';
+let aiProvider       = 'gemini';
+let aiConversation   = [];   // [{role:'user'|'assistant', content:string}]
+let aiStreaming       = false;
 
 document.querySelectorAll('.ai-provider-btn').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -1084,20 +1087,22 @@ function closeAIModal() {
 }
 function showAISetup() {
   aiSetupPanel.style.display = 'flex';
-  aiResultPanel.style.display = 'none';
+  aiChatPanel.style.display  = 'none';
 }
-function showAIResult() {
+function showAIChat() {
   aiSetupPanel.style.display = 'none';
-  aiResultPanel.style.display = 'flex';
+  aiChatPanel.style.display  = 'flex';
 }
 
 document.getElementById('btnAIPlan').addEventListener('click', openAIModal);
 document.getElementById('aiModalClose').addEventListener('click', closeAIModal);
-document.getElementById('aiResultClose').addEventListener('click', closeAIModal);
 document.getElementById('aiCancelBtn').addEventListener('click', closeAIModal);
-document.getElementById('aiBtnDone').addEventListener('click', closeAIModal);
-document.getElementById('aiBtnBack').addEventListener('click', () => {
+document.getElementById('aiChatClose').addEventListener('click', closeAIModal);
+document.getElementById('aiBtnRestart').addEventListener('click', () => {
   if (aiAbortCtrl) { aiAbortCtrl.abort(); aiAbortCtrl = null; }
+  aiConversation = [];
+  aiChatMessages.innerHTML = '';
+  aiStreaming = false;
   showAISetup();
 });
 aiModal.addEventListener('click', e => { if (e.target === aiModal) closeAIModal(); });
@@ -1199,20 +1204,58 @@ document.getElementById('aiFetchUrlBtn').addEventListener('click', async () => {
 
 document.getElementById('aiUrlClear').addEventListener('click', resetUrlPane);
 
-// ── Generate ──────────────────────────────────────────────────────────────────
-document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
-  const daysLeft    = parseFloat(aiDaysLeft.value)    || 7;
-  const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
+// ── Build first-turn context message ─────────────────────────────────────────
+function buildContextMsg(daysLeft, hoursPerDay, reviewGuide) {
+  const chapterText = course.chapters.map(ch => {
+    const total = countLeaves(ch), done = countDoneLeaves(ch);
+    const secLines = ch.sections.map(sec => {
+      if (sec.subsections?.length > 0) {
+        return `  - ${sec.title}\n` + sec.subsections.map(s => `    · ${s.title}${s.done ? ' ✓' : ''}`).join('\n');
+      }
+      return `  - ${sec.title}${sec.done ? ' ✓' : ''}`;
+    }).join('\n');
+    return `【${ch.title}】(${done}/${total} 已完成)\n${secLines}`;
+  }).join('\n\n');
 
-  // Pick guide content based on active tab
-  const tab = getActiveTab();
-  const reviewGuide = tab === 'text' ? aiReviewGuide.value.trim() : aiGuideContent;
+  return `距考试还有 ${daysLeft} 天，每天可用 ${hoursPerDay} 小时（共约 ${daysLeft * hoursPerDay} 小时）。
 
-  showAIResult();
-  aiResultTitle.textContent = '正在生成…';
-  aiResultBody.innerHTML = '<div class="ai-generating"><span class="ai-spinner"></span>正在规划复习计划，请稍候…</div>';
+课程章节及复习进度：
+${chapterText || '（暂无章节）'}
+
+复习指导：
+${reviewGuide || '（未提供）'}
+
+请根据以上信息，生成一份按天分配的详细复习计划。`;
+}
+
+// ── Core: send one message and stream the response ────────────────────────────
+async function sendAIMsg(userContent, displayLabel) {
+  if (aiStreaming) return;
+  aiStreaming = true;
+  aiChatInput.disabled = true;
+  document.getElementById('aiChatSend').disabled = true;
+
+  aiConversation.push({ role: 'user', content: userContent });
+
+  // User bubble
+  const userEl = document.createElement('div');
+  userEl.className = 'chat-msg chat-msg-user';
+  userEl.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(displayLabel || userContent)}</div>`;
+  aiChatMessages.appendChild(userEl);
+  aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+
+  // AI bubble (streaming placeholder)
+  const aiMsgEl = document.createElement('div');
+  aiMsgEl.className = 'chat-msg chat-msg-assistant';
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble chat-bubble-ai';
+  bubble.innerHTML = '<div class="ai-generating"><span class="ai-spinner"></span>正在生成…</div>';
+  aiMsgEl.appendChild(bubble);
+  aiChatMessages.appendChild(aiMsgEl);
+  aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
 
   aiAbortCtrl = new AbortController();
+  let fullText = '';
 
   try {
     const res = await fetch('/api/study-plan', {
@@ -1220,26 +1263,22 @@ document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
       headers: { 'Content-Type': 'application/json' },
       signal: aiAbortCtrl.signal,
       body: JSON.stringify({
+        provider:   aiProvider,
         courseName: course.name,
         subject:    course.subject,
-        chapters:   course.chapters,
-        reviewGuide,
-        daysLeft,
-        hoursPerDay,
-        provider:   aiProvider,
+        messages:   aiConversation,
       }),
     });
 
     if (!res.ok) {
       let errMsg;
       try { errMsg = (await res.json()).error; } catch { errMsg = await res.text(); }
-      aiResultBody.innerHTML = `<div class="ai-error">生成失败（${res.status}）：${escHtml(errMsg || '')}</div>`;
-      aiResultTitle.textContent = '生成失败';
+      bubble.innerHTML = `<div class="ai-error">生成失败（${res.status}）：${escHtml(errMsg || '')}</div>`;
+      aiConversation.pop();
       return;
     }
 
-    let fullText = '';
-    aiResultBody.innerHTML = '';
+    bubble.innerHTML = '';
     const reader = res.body.getReader();
     const dec    = new TextDecoder();
     let buf      = '';
@@ -1250,7 +1289,6 @@ document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
       buf += dec.decode(value, { stream: true });
       const lines = buf.split('\n');
       buf = lines.pop();
-
       for (const line of lines) {
         if (!line.startsWith('data: ')) continue;
         const raw = line.slice(6);
@@ -1260,22 +1298,111 @@ document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
           if (ev.err) throw new Error(ev.err);
           if (ev.t) {
             fullText += ev.t;
-            aiResultBody.innerHTML = mdToHtml(fullText) + '<span class="ai-cursor"></span>';
-            aiResultBody.scrollTop = aiResultBody.scrollHeight;
+            bubble.innerHTML = mdToHtml(fullText) + '<span class="ai-cursor"></span>';
+            aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
           }
-        } catch { /* ignore */ }
+        } catch (e) { if (!(e instanceof SyntaxError)) throw e; }
       }
     }
 
-    aiResultBody.innerHTML = mdToHtml(fullText);
-    aiResultTitle.textContent = '复习计划';
-    aiAbortCtrl = null;
+    bubble.innerHTML = mdToHtml(fullText);
+    aiConversation.push({ role: 'assistant', content: fullText });
+
+    // Save-to-materials button
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'btn-save-msg';
+    saveBtn.textContent = '💾 保存为资料';
+    saveBtn.addEventListener('click', () => saveMsgAsMaterial(fullText));
+    aiMsgEl.appendChild(saveBtn);
 
   } catch (err) {
-    if (err.name === 'AbortError') return;
-    aiResultBody.innerHTML = `<div class="ai-error">网络错误：${escHtml(err.message)}</div>`;
-    aiResultTitle.textContent = '生成失败';
+    if (err.name === 'AbortError') { aiConversation.pop(); return; }
+    bubble.innerHTML = `<div class="ai-error">网络错误：${escHtml(err.message)}</div>`;
+    aiConversation.pop();
+  } finally {
+    aiStreaming = false;
+    aiAbortCtrl = null;
+    aiChatInput.disabled = false;
+    document.getElementById('aiChatSend').disabled = false;
+    aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
   }
+}
+
+// ── First generation ──────────────────────────────────────────────────────────
+document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
+  const daysLeft    = parseFloat(aiDaysLeft.value)    || 7;
+  const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
+  const tab         = getActiveTab();
+  const reviewGuide = tab === 'text' ? aiReviewGuide.value.trim() : aiGuideContent;
+
+  aiConversation   = [];
+  aiChatMessages.innerHTML = '';
+  showAIChat();
+
+  const contextMsg   = buildContextMsg(daysLeft, hoursPerDay, reviewGuide);
+  const displayLabel = `📋 生成复习计划 · ${daysLeft} 天 · 每天 ${hoursPerDay} 小时${reviewGuide ? ' · 含复习指导' : ''}`;
+  await sendAIMsg(contextMsg, displayLabel);
+});
+
+// ── Follow-up chat ────────────────────────────────────────────────────────────
+async function doSend() {
+  const text = aiChatInput.value.trim();
+  if (!text || aiStreaming) return;
+  aiChatInput.value = '';
+  await sendAIMsg(text);
+}
+document.getElementById('aiChatSend').addEventListener('click', doSend);
+aiChatInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+});
+
+// ── Save AI message to materials ──────────────────────────────────────────────
+async function saveMsgAsMaterial(content) {
+  const now  = new Date();
+  const pad  = n => String(n).padStart(2, '0');
+  const name = `AI对话_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.txt`;
+  const data = new TextEncoder().encode(content).buffer;
+  await dbSave({
+    id: `mat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    courseId, name, type: 'text/plain',
+    size: data.byteLength, data, addedAt: now.toISOString(),
+  });
+  await renderMaterials();
+  showToast('已保存到课程资料 ✓');
+}
+
+// ── Text edit modal ───────────────────────────────────────────────────────────
+let textEditFileId = null;
+
+function openTextEditModal(f) {
+  textEditFileId = f.id;
+  document.getElementById('textEditTitle').textContent = f.name;
+  const text = new TextDecoder().decode(f.data);
+  document.getElementById('textEditArea').value = text;
+  document.getElementById('textEditModal').classList.add('open');
+}
+function closeTextEditModal() {
+  document.getElementById('textEditModal').classList.remove('open');
+  textEditFileId = null;
+}
+
+document.getElementById('textEditClose').addEventListener('click', closeTextEditModal);
+document.getElementById('textEditCancel').addEventListener('click', closeTextEditModal);
+document.getElementById('textEditModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('textEditModal')) closeTextEditModal();
+});
+
+document.getElementById('textEditSave').addEventListener('click', async () => {
+  if (!textEditFileId) return;
+  const text = document.getElementById('textEditArea').value;
+  const data = new TextEncoder().encode(text).buffer;
+  const all  = await dbGetAll();
+  const orig = all.find(f => f.id === textEditFileId);
+  if (!orig) return;
+  await dbSave({ ...orig, data, size: data.byteLength });
+  closeTextEditModal();
+  await renderMaterials();
+  showToast('已保存 ✓');
 });
 
 function mdToHtml(md) {
