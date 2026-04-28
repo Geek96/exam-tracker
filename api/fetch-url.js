@@ -1,7 +1,8 @@
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).end('Method Not Allowed'); return; }
 
-  const { url } = req.body || {};
+  const body = req.body || {};
+  const url = body.url;
 
   if (!url || !/^https?:\/\//.test(url)) {
     res.status(400).json({ error: '请输入有效的 http/https 链接' }); return;
@@ -18,7 +19,7 @@ export default async function handler(req, res) {
     });
 
     if (!upstream.ok) {
-      res.status(502).json({ error: `HTTP ${upstream.status}` }); return;
+      res.status(502).json({ error: 'HTTP ' + upstream.status }); return;
     }
 
     const ct  = upstream.headers.get('content-type') || '';
@@ -45,3 +46,5 @@ export default async function handler(req, res) {
     res.status(502).json({ error: err.message });
   }
 }
+
+module.exports = handler;
