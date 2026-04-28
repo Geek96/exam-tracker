@@ -71,6 +71,25 @@
       <div id="chaptersList"></div>
     </div>
 
+    <!-- Materials Section -->
+    <div class="materials-section">
+      <div class="materials-toolbar">
+        <h2 class="materials-title">课程资料</h2>
+        <div class="materials-toolbar-right">
+          <label class="btn-sm accent materials-upload-btn" for="materialFileInput">+ 上传文件</label>
+          <input type="file" id="materialFileInput" multiple
+            accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.webp" style="display:none" />
+        </div>
+      </div>
+      <div class="materials-drop-zone" id="materialsDropZone">
+        <div class="materials-grid" id="materialsGrid"></div>
+        <div class="materials-empty" id="materialsEmpty">
+          <div class="materials-empty-icon">📂</div>
+          <p>暂无资料 — 拖拽文件到此处或点击「上传文件」</p>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- ══════════════════════════════════════════
@@ -243,10 +262,50 @@
               <input class="ai-input-sm" type="number" id="aiHoursPerDay" min="0.5" max="24" step="0.5" value="3" />
             </div>
           </div>
-          <div class="ai-field ai-field-full">
-            <label class="ai-label">老师的复习指导 / 考试重点 <span class="ai-optional">（选填）</span></label>
-            <textarea class="ai-textarea" id="aiReviewGuide"
-              placeholder="粘贴老师发的复习提纲、考试重点、题型说明等内容…"></textarea>
+          <!-- Guide Input Tabs -->
+          <div class="ai-guide-wrap">
+            <div class="ai-label" style="margin-bottom:8px">复习指导资料 <span class="ai-optional">（选填，支持文字 / PDF / 网页）</span></div>
+            <div class="ai-tabs" id="aiTabs">
+              <button class="ai-tab active" data-tab="text">文字输入</button>
+              <button class="ai-tab" data-tab="pdf">PDF 文件</button>
+              <button class="ai-tab" data-tab="url">网页链接</button>
+            </div>
+
+            <!-- Text pane -->
+            <div class="ai-pane" id="aiPaneText">
+              <textarea class="ai-textarea" id="aiReviewGuide"
+                placeholder="粘贴老师发的复习提纲、考试重点、题型说明等内容…"></textarea>
+            </div>
+
+            <!-- PDF pane -->
+            <div class="ai-pane" id="aiPanePdf" style="display:none">
+              <div class="ai-upload-zone" id="aiPdfZone">
+                <div class="ai-upload-icon">📄</div>
+                <p>上传小型 PDF，AI 将自动提取文字内容</p>
+                <label class="btn-pdf-pick" for="aiPdfFile">选择 PDF 文件</label>
+                <input type="file" id="aiPdfFile" accept=".pdf" style="display:none" />
+              </div>
+              <div class="ai-loaded-file" id="aiPdfLoaded" style="display:none">
+                <span class="ai-loaded-icon">✅</span>
+                <span id="aiPdfName" class="ai-loaded-name"></span>
+                <span id="aiPdfChars" class="ai-loaded-meta"></span>
+                <button id="aiPdfClear" class="ai-loaded-clear">✕ 重新选择</button>
+              </div>
+            </div>
+
+            <!-- URL pane -->
+            <div class="ai-pane" id="aiPaneUrl" style="display:none">
+              <div class="ai-url-row">
+                <input class="ai-url-input" type="url" id="aiUrlInput" placeholder="https://…" />
+                <button class="btn-sm" id="aiFetchUrlBtn">获取内容</button>
+              </div>
+              <div class="ai-url-status" id="aiUrlStatus"></div>
+              <div class="ai-loaded-file" id="aiUrlLoaded" style="display:none">
+                <span class="ai-loaded-icon">✅</span>
+                <span id="aiUrlChars" class="ai-loaded-meta"></span>
+                <button id="aiUrlClear" class="ai-loaded-clear">✕ 清除</button>
+              </div>
+            </div>
           </div>
         </div>
         <div class="modal-footer">

@@ -914,6 +914,142 @@ btnReset.addEventListener('click', function () {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
+//  Materials (IndexedDB)
+// ══════════════════════════════════════════════════════════════════════════════
+let _idb = null;
+function getDB() {
+  if (_idb) return Promise.resolve(_idb);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('examTrackerFiles', 1);
+    req.onupgradeneeded = e => e.target.result.createObjectStore('files', { keyPath: 'id' });
+    req.onsuccess = e => { _idb = e.target.result; res(_idb); };
+    req.onerror = () => rej(req.error);
+  });
+}
+async function dbSave(record) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('files', 'readwrite');
+    tx.objectStore('files').put(record);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+async function dbGetAll() {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const req = db.transaction('files', 'readonly').objectStore('files').getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
+  });
+}
+async function dbDelete(id) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('files', 'readwrite');
+    tx.objectStore('files').delete(id);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+function fileIcon(type, name) {
+  const n = (name || '').toLowerCase();
+  if (type === 'application/pdf' || n.endsWith('.pdf')) return '📄';
+  if (type.startsWith('image/')) return '🖼';
+  if (n.endsWith('.pptx') || n.endsWith('.ppt')) return '📊';
+  if (n.endsWith('.docx') || n.endsWith('.doc')) return '📝';
+  if (n.endsWith('.txt')) return '📃';
+  return '📎';
+}
+function fmtSize(b) {
+  if (b < 1024) return `${b} B`;
+  if (b < 1048576) return `${(b/1024).toFixed(1)} KB`;
+  return `${(b/1048576).toFixed(1)} MB`;
+}
+
+async function renderMaterials() {
+  const all   = await dbGetAll();
+  const files = all.filter(f => f.courseId === courseId);
+  const grid  = document.getElementById('materialsGrid');
+  const empty = document.getElementById('materialsEmpty');
+  grid.innerHTML = '';
+
+  if (files.length === 0) {
+    empty.style.display = 'flex';
+    grid.style.display = 'none';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+
+  files.forEach(f => {
+    const card = document.createElement('div');
+    card.className = 'material-card';
+    card.innerHTML = `
+      <div class="material-card-icon">${fileIcon(f.type, f.name)}</div>
+      <div class="material-card-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
+      <div class="material-card-meta">${fmtSize(f.size)} · ${new Date(f.addedAt).toLocaleDateString('zh-CN')}</div>
+      <div class="material-card-actions">
+        <button class="btn-mat-open">查看</button>
+        <button class="btn-mat-del">删除</button>
+      </div>`;
+    card.querySelector('.btn-mat-open').addEventListener('click', e => {
+      e.stopPropagation();
+      const blob = new Blob([f.data], { type: f.type });
+      const url  = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 15000);
+    });
+    card.querySelector('.btn-mat-del').addEventListener('click', async e => {
+      e.stopPropagation();
+      await dbDelete(f.id);
+      renderMaterials();
+      showToast('已删除');
+    });
+    grid.appendChild(card);
+  });
+}
+
+async function uploadMaterialFiles(fileList) {
+  for (const file of fileList) {
+    const data = await file.arrayBuffer();
+    await dbSave({
+      id: `mat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+      courseId,
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      data,
+      addedAt: new Date().toISOString(),
+    });
+  }
+  await renderMaterials();
+  showToast(`已上传 ${fileList.length} 个文件`);
+}
+
+// File input
+document.getElementById('materialFileInput').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  e.target.value = '';
+  if (files.length) await uploadMaterialFiles(files);
+});
+
+// Drag-and-drop onto materials zone
+const matDropZone = document.getElementById('materialsDropZone');
+matDropZone.addEventListener('dragover', e => { e.preventDefault(); matDropZone.classList.add('drag-over'); });
+matDropZone.addEventListener('dragleave', () => matDropZone.classList.remove('drag-over'));
+matDropZone.addEventListener('drop', async e => {
+  e.preventDefault();
+  matDropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  if (files.length) await uploadMaterialFiles(files);
+});
+
+// Initialise
+renderMaterials();
+
+// ══════════════════════════════════════════════════════════════════════════════
 //  AI Study Plan
 // ══════════════════════════════════════════════════════════════════════════════
 const aiModal       = document.getElementById('aiModal');
@@ -925,6 +1061,7 @@ const aiDaysLeft    = document.getElementById('aiDaysLeft');
 const aiHoursPerDay = document.getElementById('aiHoursPerDay');
 const aiReviewGuide = document.getElementById('aiReviewGuide');
 let aiAbortCtrl     = null;
+let aiGuideContent  = '';  // populated by PDF or URL tabs; text tab reads textarea directly
 
 function openAIModal() {
   const d = daysUntil(course.examDate);
@@ -956,10 +1093,111 @@ document.getElementById('aiBtnBack').addEventListener('click', () => {
 });
 aiModal.addEventListener('click', e => { if (e.target === aiModal) closeAIModal(); });
 
+// ── AI Guide Tabs ─────────────────────────────────────────────────────────────
+function getActiveTab() {
+  const active = document.querySelector('.ai-tab.active');
+  return active ? active.dataset.tab : 'text';
+}
+
+document.querySelectorAll('.ai-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('aiPaneText').style.display = tab === 'text' ? 'flex' : 'none';
+    document.getElementById('aiPanePdf').style.display  = tab === 'pdf'  ? 'flex' : 'none';
+    document.getElementById('aiPaneUrl').style.display  = tab === 'url'  ? 'flex' : 'none';
+    if (tab !== 'pdf') { /* keep aiGuideContent from pdf until user explicitly clears */ }
+    if (tab !== 'url') { /* keep aiGuideContent from url until user explicitly clears */ }
+    if (tab === 'text') aiGuideContent = '';
+  });
+});
+
+// ── PDF tab: extract text ─────────────────────────────────────────────────────
+function resetPdfPane() {
+  document.getElementById('aiPdfZone').style.display   = 'flex';
+  document.getElementById('aiPdfLoaded').style.display = 'none';
+  aiGuideContent = '';
+}
+
+document.getElementById('aiPdfFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if (!file) return;
+
+  document.getElementById('aiPdfZone').style.display   = 'none';
+  document.getElementById('aiPdfLoaded').style.display = 'none';
+
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    const maxPages = Math.min(pdf.numPages, 40);
+    for (let i = 1; i <= maxPages; i++) {
+      const page    = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it => it.str).join(' ') + '\n';
+    }
+    aiGuideContent = text.trim().slice(0, 25000);
+
+    document.getElementById('aiPdfName').textContent  = file.name;
+    document.getElementById('aiPdfChars').textContent = `已提取 ${aiGuideContent.length} 字`;
+    document.getElementById('aiPdfLoaded').style.display = 'flex';
+  } catch (err) {
+    document.getElementById('aiPdfZone').style.display = 'flex';
+    showToast('PDF 提取失败：' + err.message);
+  }
+});
+
+document.getElementById('aiPdfClear').addEventListener('click', resetPdfPane);
+
+// ── URL tab: fetch content ────────────────────────────────────────────────────
+function resetUrlPane() {
+  document.getElementById('aiUrlLoaded').style.display = 'none';
+  document.getElementById('aiUrlStatus').textContent   = '';
+  aiGuideContent = '';
+}
+
+document.getElementById('aiFetchUrlBtn').addEventListener('click', async () => {
+  const url    = document.getElementById('aiUrlInput').value.trim();
+  const status = document.getElementById('aiUrlStatus');
+  if (!url) { showToast('请输入链接'); return; }
+
+  status.textContent = '正在获取页面内容…';
+  document.getElementById('aiUrlLoaded').style.display = 'none';
+  document.getElementById('aiFetchUrlBtn').disabled = true;
+
+  try {
+    const res  = await fetch('/api/fetch-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    aiGuideContent = data.text;
+    status.textContent = '';
+    document.getElementById('aiUrlChars').textContent = `已提取 ${aiGuideContent.length} 字`;
+    document.getElementById('aiUrlLoaded').style.display = 'flex';
+  } catch (err) {
+    status.textContent = '获取失败：' + err.message;
+    aiGuideContent = '';
+  } finally {
+    document.getElementById('aiFetchUrlBtn').disabled = false;
+  }
+});
+
+document.getElementById('aiUrlClear').addEventListener('click', resetUrlPane);
+
+// ── Generate ──────────────────────────────────────────────────────────────────
 document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
   const daysLeft    = parseFloat(aiDaysLeft.value)    || 7;
   const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
-  const reviewGuide = aiReviewGuide.value.trim();
+
+  // Pick guide content based on active tab
+  const tab = getActiveTab();
+  const reviewGuide = tab === 'text' ? aiReviewGuide.value.trim() : aiGuideContent;
 
   showAIResult();
   aiResultTitle.textContent = '正在生成…';
@@ -983,8 +1221,9 @@ document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
     });
 
     if (!res.ok) {
-      const msg = await res.text();
-      aiResultBody.innerHTML = `<div class="ai-error">生成失败（${res.status}）：${escHtml(msg)}</div>`;
+      let errMsg;
+      try { errMsg = (await res.json()).error; } catch { errMsg = await res.text(); }
+      aiResultBody.innerHTML = `<div class="ai-error">生成失败（${res.status}）：${escHtml(errMsg || '')}</div>`;
       aiResultTitle.textContent = '生成失败';
       return;
     }

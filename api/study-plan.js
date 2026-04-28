@@ -12,6 +12,14 @@ export default async function handler(req) {
     return new Response('Bad Request', { status: 400 });
   }
 
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: 'ANTHROPIC_API_KEY 未在服务器配置，请在 Vercel 项目设置中添加此环境变量' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const { courseName, subject, chapters = [], reviewGuide, daysLeft, hoursPerDay } = body;
 
   const chapterText = chapters.map(ch => {
@@ -61,7 +69,7 @@ ${reviewGuide || '（未提供，请根据章节内容自行判断重点）'}
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'x-api-key': process.env.ANTHROPIC_API_KEY,
+      'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
     },
     body: JSON.stringify({
