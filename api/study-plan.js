@@ -63,7 +63,12 @@ async function handleClaude(system, userMsg) {
     }),
   });
 
-  if (!upstream.ok) return new Response(await upstream.text(), { status: upstream.status });
+  if (!upstream.ok) {
+    const raw = await upstream.text();
+    let msg = raw;
+    try { msg = JSON.parse(raw).error?.message || raw; } catch {}
+    return errJson(upstream.status, msg);
+  }
 
   return streamSSE(upstream.body, line => {
     try {
@@ -78,7 +83,7 @@ async function handleGemini(system, userMsg) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return errJson(500, 'GEMINI_API_KEY 未在 Vercel 环境变量中配置');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   const upstream = await fetch(url, {
     method: 'POST',
@@ -90,7 +95,12 @@ async function handleGemini(system, userMsg) {
     }),
   });
 
-  if (!upstream.ok) return new Response(await upstream.text(), { status: upstream.status });
+  if (!upstream.ok) {
+    const raw = await upstream.text();
+    let msg = raw;
+    try { msg = JSON.parse(raw).error?.message || raw; } catch {}
+    return errJson(upstream.status, msg);
+  }
 
   return streamSSE(upstream.body, line => {
     try {
