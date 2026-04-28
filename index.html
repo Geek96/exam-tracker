@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>考试复习追踪器</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">📚</span>
+        <span class="logo-text">复习追踪器</span>
+      </div>
+      <div class="header-stats" id="headerStats">
+        <span class="stat-pill" id="totalCoursesLabel">0 门课程</span>
+        <span class="stat-pill accent" id="avgProgressLabel">平均进度 0%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- Section title row -->
+    <div class="section-row">
+      <h2 class="section-title">我的课程</h2>
+      <button class="btn-add" id="btnAddCourse">
+        <span class="btn-add-icon">+</span> 添加课程
+      </button>
+    </div>
+
+    <!-- Empty state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🎯</div>
+      <p class="empty-title">还没有课程</p>
+      <p class="empty-sub">点击「添加课程」开始规划你的复习计划</p>
+    </div>
+
+    <!-- Course grid -->
+    <div class="course-grid" id="courseGrid"></div>
+
+  </main>
+
+  <!-- Add Course Modal -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h3 class="modal-title">添加新课程</h3>
+        <button class="modal-close" id="modalClose">✕</button>
+      </div>
+      <form class="modal-form" id="courseForm">
+
+        <label class="form-label">课程名称 <span class="required">*</span></label>
+        <input class="form-input" type="text" id="inputName" placeholder="例：高等数学" maxlength="40" required />
+
+        <label class="form-label">科目分类</label>
+        <input class="form-input" type="text" id="inputSubject" placeholder="例：数学、英语、物理…" maxlength="20" />
+
+        <label class="form-label">考试日期</label>
+        <input class="form-input" type="date" id="inputDate" />
+
+        <label class="form-label">章节总数</label>
+        <input class="form-input" type="number" id="inputTotal" placeholder="例：12" min="1" max="999" />
+
+        <label class="form-label">课程颜色</label>
+        <div class="color-picker" id="colorPicker">
+          <button type="button" class="color-swatch selected" data-color="#5B8DEF" style="background:#5B8DEF"></button>
+          <button type="button" class="color-swatch" data-color="#F97B6B" style="background:#F97B6B"></button>
+          <button type="button" class="color-swatch" data-color="#59C185" style="background:#59C185"></button>
+          <button type="button" class="color-swatch" data-color="#F0B429" style="background:#F0B429"></button>
+          <button type="button" class="color-swatch" data-color="#A78BFA" style="background:#A78BFA"></button>
+          <button type="button" class="color-swatch" data-color="#38BDF8" style="background:#38BDF8"></button>
+          <button type="button" class="color-swatch" data-color="#FB7185" style="background:#FB7185"></button>
+          <button type="button" class="color-swatch" data-color="#34D399" style="background:#34D399"></button>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="btnCancel">取消</button>
+          <button type="submit" class="btn-submit">添加课程</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete confirm toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>

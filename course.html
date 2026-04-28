@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>课程详情 - 复习追踪器</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="course.css" />
+</head>
+<body>
+
+  <!-- ── Top Bar ── -->
+  <header class="topbar">
+    <a class="back-btn" href="index.html">← 返回</a>
+    <div class="topbar-mid" id="topbarMid">
+      <span class="topbar-name" id="topbarName">加载中…</span>
+      <span class="topbar-subject" id="topbarSubject"></span>
+    </div>
+    <div class="topbar-right">
+      <button class="btn-edit-top" id="btnEditCourse">✎ 编辑信息</button>
+      <button class="btn-import-top" id="btnImportTop">+ 导入章节</button>
+    </div>
+  </header>
+
+  <!-- ── Course Hero ── -->
+  <div class="course-hero" id="courseHero">
+    <div class="hero-inner">
+      <div class="hero-meta" id="heroMeta"></div>
+      <div class="hero-progress">
+        <div class="hero-progress-row">
+          <span>总复习进度</span>
+          <span class="hero-pct" id="heroPct">0%</span>
+        </div>
+        <div class="hero-bar">
+          <div class="hero-fill" id="heroFill" style="width:0%"></div>
+        </div>
+        <div class="hero-counts" id="heroCounts">暂无章节</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Main ── -->
+  <main class="course-main">
+
+    <!-- Empty / Import Panel -->
+    <div class="import-landing" id="importLanding">
+      <div class="import-card" id="dropZoneCard">
+        <div class="import-icon">📄</div>
+        <h3>从 PDF 导入章节目录</h3>
+        <p>将课本 PDF 拖拽到此处，或点击选择文件<br>系统将自动提取书签目录并让你选择章节范围</p>
+        <div class="import-btns">
+          <label class="btn-pdf-pick" for="pdfFileInput">选择 PDF 文件</label>
+          <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" />
+          <button class="btn-manual-add" id="btnManualAdd">手动添加章节</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chapters List (populated after import) -->
+    <div class="chapters-wrap" id="chaptersWrap" style="display:none">
+      <div class="chapters-toolbar">
+        <h2 class="chapters-title">章节目录</h2>
+        <div class="chapters-toolbar-right">
+          <button class="btn-sm" id="btnExpandAll">全部展开</button>
+          <button class="btn-sm" id="btnCollapseAll">全部折叠</button>
+          <button class="btn-sm" id="btnResetChapters">重新开始</button>
+          <button class="btn-sm accent" id="btnAddMore">+ 导入更多</button>
+        </div>
+      </div>
+      <div id="chaptersList"></div>
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════
+       PDF Import Modal  (2-step)
+  ══════════════════════════════════════════ -->
+  <div class="modal-overlay" id="pdfModal">
+    <div class="modal modal-wide" id="pdfModalBox">
+
+      <!-- ── Step 1: Upload ── -->
+      <div class="modal-step" id="step1" style="display:flex">
+        <div class="modal-header">
+          <h3 class="modal-title">导入 PDF 目录</h3>
+          <button class="modal-close" id="pdfModalClose1">✕</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Drop zone -->
+          <div class="pdf-drop" id="pdfDrop">
+            <div class="pdf-drop-icon" id="pdfDropIcon">📂</div>
+            <p class="pdf-drop-main" id="pdfDropMain">拖拽 PDF 到此处</p>
+            <p class="pdf-drop-sub">或</p>
+            <label class="btn-pdf-browse" for="pdfFileModal">选择文件</label>
+            <input type="file" id="pdfFileModal" accept=".pdf" style="display:none" />
+            <p class="pdf-drop-note" id="pdfDropNote">仅支持含书签目录的 PDF</p>
+          </div>
+
+          <!-- Loading state -->
+          <div class="pdf-loading" id="pdfLoading" style="display:none">
+            <div class="spinner"></div>
+            <p>正在提取目录，请稍候…</p>
+          </div>
+
+          <!-- Error state -->
+          <div class="pdf-error" id="pdfError" style="display:none">
+            <p class="pdf-error-icon">⚠️</p>
+            <p id="pdfErrorMsg"></p>
+            <button class="btn-retry" id="btnRetry">重新选择</button>
+          </div>
+
+          <!-- No outline fallback -->
+          <div class="pdf-no-outline" id="pdfNoOutline" style="display:none">
+            <p class="pdf-error-icon">📋</p>
+            <p>此 PDF 没有书签目录，请手动粘贴目录文本：</p>
+            <textarea class="toc-paste" id="tocPaste"
+              placeholder="例：&#10;Chapter 3 Linear Algebra&#10;3.1 Vector Spaces&#10;3.2 Subspaces&#10;3.3 Linear Independence&#10;Chapter 4 Matrix Operations&#10;4.1 Matrix Addition"></textarea>
+            <button class="btn-parse-text" id="btnParseText">解析文本目录</button>
+          </div>
+
+        </div>
+        <div class="modal-footer" id="step1Footer" style="display:none">
+          <button class="btn-cancel" id="step1Cancel">取消</button>
+          <button class="btn-submit" id="step1Next">下一步 →</button>
+        </div>
+      </div>
+
+      <!-- ── Step 2: TOC + Range Select ── -->
+      <div class="modal-step" id="step2" style="display:none">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">选择章节范围</h3>
+            <p class="modal-sub" id="tocFileName"></p>
+          </div>
+          <button class="modal-close" id="pdfModalClose2">✕</button>
+        </div>
+        <div class="modal-body">
+
+          <!-- Range input bar -->
+          <div class="range-bar">
+            <span class="range-label">选择范围</span>
+            <input class="range-input" type="text" id="rangeStart" placeholder="起始  如 3.1" />
+            <span class="range-sep">至</span>
+            <input class="range-input" type="text" id="rangeEnd" placeholder="结束  如 7.8" />
+            <button class="btn-apply-range" id="btnApplyRange">应用</button>
+            <button class="btn-sel-all" id="btnSelAll">全选</button>
+            <button class="btn-sel-all" id="btnSelNone">清空</button>
+          </div>
+
+          <!-- TOC tree -->
+          <div class="toc-scroll" id="tocScroll">
+            <div class="toc-tree" id="tocTree"></div>
+          </div>
+
+          <!-- Selection summary -->
+          <div class="toc-summary" id="tocSummary">已选 <strong id="selCount">0</strong> 个章节 / <strong id="selSecCount">0</strong> 个小节</div>
+
+        </div>
+        <div class="modal-footer">
+          <button class="btn-cancel" id="step2Back">← 上一步</button>
+          <button class="btn-submit" id="btnImportConfirm">导入选中章节</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Edit Course Modal -->
+  <div class="modal-overlay" id="editCourseModal">
+    <div class="modal" id="editCourseBox">
+      <div class="modal-header">
+        <h3 class="modal-title">编辑课程信息</h3>
+        <button class="modal-close" id="editCourseClose">✕</button>
+      </div>
+      <form class="modal-form" id="editCourseForm">
+        <label class="form-label">课程名称 <span class="required">*</span></label>
+        <input class="form-input" type="text" id="editName" maxlength="40" required />
+
+        <label class="form-label">科目分类</label>
+        <input class="form-input" type="text" id="editSubject" maxlength="20" />
+
+        <label class="form-label">考试日期</label>
+        <input class="form-input" type="date" id="editDate" />
+
+        <label class="form-label">课程颜色</label>
+        <div class="color-picker" id="editColorPicker">
+          <button type="button" class="color-swatch" data-color="#5B8DEF" style="background:#5B8DEF"></button>
+          <button type="button" class="color-swatch" data-color="#F97B6B" style="background:#F97B6B"></button>
+          <button type="button" class="color-swatch" data-color="#59C185" style="background:#59C185"></button>
+          <button type="button" class="color-swatch" data-color="#F0B429" style="background:#F0B429"></button>
+          <button type="button" class="color-swatch" data-color="#A78BFA" style="background:#A78BFA"></button>
+          <button type="button" class="color-swatch" data-color="#38BDF8" style="background:#38BDF8"></button>
+          <button type="button" class="color-swatch" data-color="#FB7185" style="background:#FB7185"></button>
+          <button type="button" class="color-swatch" data-color="#34D399" style="background:#34D399"></button>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn-cancel" id="editCourseCancel">取消</button>
+          <button type="submit" class="btn-submit">保存更改</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Manual Chapter Modal -->
+  <div class="modal-overlay" id="manualModal">
+    <div class="modal" id="manualModalBox">
+      <div class="modal-header">
+        <h3 class="modal-title">手动添加章节</h3>
+        <button class="modal-close" id="manualClose">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:13px;color:var(--muted);margin-bottom:12px">每行一个章节或小节，用数字前缀表示层级：</p>
+        <textarea class="toc-paste" id="manualText"
+          placeholder="例：&#10;第三章 线性代数&#10;3.1 向量空间&#10;3.2 子空间&#10;第四章 矩阵运算&#10;4.1 矩阵加法"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="manualCancel">取消</button>
+        <button class="btn-submit" id="manualConfirm">添加</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="course.js"></script>
+</body>
+</html>
