@@ -93,7 +93,7 @@ async function handleGemini(system, userMsg) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return errJson(500, 'GEMINI_API_KEY 未在 Vercel 环境变量中配置');
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse&key=${apiKey}`;
 
   let upstream;
   try {
