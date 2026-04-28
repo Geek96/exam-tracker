@@ -1257,6 +1257,7 @@ document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
         if (raw === '[DONE]') continue;
         try {
           const ev = JSON.parse(raw);
+          if (ev.err) throw new Error(ev.err);
           if (ev.t) {
             fullText += ev.t;
             aiResultBody.innerHTML = mdToHtml(fullText) + '<span class="ai-cursor"></span>';

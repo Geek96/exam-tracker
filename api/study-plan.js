@@ -4,30 +4,31 @@ export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
 
   let body;
-  try { body = await req.json(); } catch { return new Response('Bad Request', { status: 400 }); }
+  try { body = await req.json(); } catch { return errJson(400, 'Bad Request'); }
 
-  const { courseName, subject, chapters = [], reviewGuide, daysLeft, hoursPerDay, provider = 'gemini' } = body;
+  try {
+    const { courseName, subject, chapters = [], reviewGuide, daysLeft, hoursPerDay, provider = 'gemini' } = body;
 
-  const chapterText = chapters.map(ch => {
-    const total = countLeaves(ch), done = countDoneLeaves(ch);
-    const secLines = ch.sections.map(sec => {
-      if (sec.subsections?.length > 0) {
-        return `    - ${sec.title}\n` + sec.subsections.map(s => `      · ${s.title}${s.done ? ' ✓' : ''}`).join('\n');
-      }
-      return `    - ${sec.title}${sec.done ? ' ✓' : ''}`;
-    }).join('\n');
-    return `【${ch.title}】(${done}/${total} 已完成)\n${secLines}`;
-  }).join('\n\n');
+    const chapterText = (chapters || []).map(ch => {
+      const total = countLeaves(ch), done = countDoneLeaves(ch);
+      const secLines = (ch.sections || []).map(sec => {
+        if (sec.subsections?.length > 0) {
+          return `    - ${sec.title}\n` + sec.subsections.map(s => `      · ${s.title}${s.done ? ' ✓' : ''}`).join('\n');
+        }
+        return `    - ${sec.title}${sec.done ? ' ✓' : ''}`;
+      }).join('\n');
+      return `【${ch.title}】(${done}/${total} 已完成)\n${secLines}`;
+    }).join('\n\n');
 
-  const totalHours = daysLeft != null ? daysLeft * hoursPerDay : null;
+    const totalHours = (daysLeft != null && hoursPerDay != null) ? daysLeft * hoursPerDay : null;
 
-  const system = `你是一名专业的考试备考助手，擅长制定科学高效的复习计划。
+    const system = `你是一名专业的考试备考助手，擅长制定科学高效的复习计划。
 请根据用户提供的课程大纲、当前复习进度、老师的考试重点和可用时间，生成一份详细的个性化备考计划。
 要求：用 Markdown 格式（## 每天标题，- 具体任务），每天计划具体到章节小节并标注时间，已完成（✓）可轻量复习或跳过，使用中文。`;
 
-  const userMsg = `课程：${courseName}${subject ? `（${subject}）` : ''}
+    const userMsg = `课程：${courseName || '未命名'}${subject ? `（${subject}）` : ''}
 距离考试：${daysLeft != null ? `${daysLeft} 天` : '未设置'}
-每天可用：${hoursPerDay} 小时${totalHours != null ? `（共约 ${totalHours} 小时）` : ''}
+每天可用：${hoursPerDay || 3} 小时${totalHours != null ? `（共约 ${totalHours} 小时）` : ''}
 
 课程章节及进度：
 ${chapterText || '（暂无章节数据）'}
@@ -37,9 +38,13 @@ ${reviewGuide || '（未提供，请根据章节内容自行判断重点）'}
 
 请生成按天分配的详细复习计划。`;
 
-  return provider === 'claude'
-    ? handleClaude(system, userMsg)
-    : handleGemini(system, userMsg);
+    return provider === 'claude'
+      ? handleClaude(system, userMsg)
+      : handleGemini(system, userMsg);
+
+  } catch (err) {
+    return errJson(500, `服务器错误：${err.message}`);
+  }
 }
 
 // ── Anthropic Claude ──────────────────────────────────────────────────────────
@@ -47,21 +52,26 @@ async function handleClaude(system, userMsg) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return errJson(500, 'ANTHROPIC_API_KEY 未在 Vercel 环境变量中配置');
 
-  const upstream = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-opus-4-7',
-      max_tokens: 4096,
-      stream: true,
-      system,
-      messages: [{ role: 'user', content: userMsg }],
-    }),
-  });
+  let upstream;
+  try {
+    upstream = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-7',
+        max_tokens: 4096,
+        stream: true,
+        system,
+        messages: [{ role: 'user', content: userMsg }],
+      }),
+    });
+  } catch (err) {
+    return errJson(502, `无法连接 Anthropic：${err.message}`);
+  }
 
   if (!upstream.ok) {
     const raw = await upstream.text();
@@ -74,7 +84,7 @@ async function handleClaude(system, userMsg) {
     try {
       const ev = JSON.parse(line);
       if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') return ev.delta.text;
-    } catch { /* ignore */ }
+    } catch {}
   });
 }
 
@@ -85,15 +95,20 @@ async function handleGemini(system, userMsg) {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  const upstream = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: system }] },
-      contents: [{ role: 'user', parts: [{ text: userMsg }] }],
-      generationConfig: { maxOutputTokens: 4096 },
-    }),
-  });
+  let upstream;
+  try {
+    upstream = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: system }] },
+        contents: [{ role: 'user', parts: [{ text: userMsg }] }],
+        generationConfig: { maxOutputTokens: 4096 },
+      }),
+    });
+  } catch (err) {
+    return errJson(502, `无法连接 Gemini：${err.message}`);
+  }
 
   if (!upstream.ok) {
     const raw = await upstream.text();
@@ -106,7 +121,7 @@ async function handleGemini(system, userMsg) {
     try {
       const ev = JSON.parse(line);
       return ev.candidates?.[0]?.content?.parts?.[0]?.text;
-    } catch { /* ignore */ }
+    } catch {}
   });
 }
 
@@ -136,18 +151,30 @@ function streamSSE(body, extractText) {
         }
       }
       await writer.write(encoder.encode('data: [DONE]\n\n'));
+    } catch (err) {
+      // surface stream errors back to the client via SSE
+      try {
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ err: err.message })}\n\n`));
+      } catch {}
     } finally {
-      await writer.close();
+      try { await writer.close(); } catch {}
     }
   })();
 
   return new Response(readable, {
-    headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no' },
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'X-Accel-Buffering': 'no',
+    },
   });
 }
 
 function errJson(status, msg) {
-  return new Response(JSON.stringify({ error: msg }), { status, headers: { 'Content-Type': 'application/json' } });
+  return new Response(JSON.stringify({ error: msg }), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }
 
 function countLeaves(ch) {
