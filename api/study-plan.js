@@ -1,32 +1,34 @@
-export const config = { runtime: 'edge' };
+export default async function handler(req, res) {
+  if (req.method !== 'POST') { res.status(405).end('Method Not Allowed'); return; }
 
-export default async function handler(req) {
-  if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
+  const body = req.body || {};
+  const { provider = 'gemini', courseName, subject, messages } = body;
+  const msgs = Array.isArray(messages) ? messages : [];
 
-  let body;
-  try { body = await req.json(); } catch { return errJson(400, 'Bad Request'); }
-
-  try {
-    const { provider = 'gemini', courseName, subject, messages } = body;
-    const msgs = Array.isArray(messages) ? messages : [];
-
-    const system = `你是一名专业的考试备考助手，擅长制定科学高效的复习计划，并能根据用户的追问进行深入解答。
+  const system = `你是一名专业的考试备考助手，擅长制定科学高效的复习计划，并能根据用户的追问进行深入解答。
 课程：${courseName || '未命名'}${subject ? `（${subject}）` : ''}
 请用 Markdown 格式回复，使用中文。`;
 
-    return provider === 'claude'
-      ? handleClaude(system, msgs)
-      : handleGemini(system, msgs);
-
+  try {
+    if (provider === 'claude') {
+      await handleClaude(system, msgs, res);
+    } else {
+      await handleGemini(system, msgs, res);
+    }
   } catch (err) {
-    return errJson(500, `服务器错误：${err.message}`);
+    if (!res.headersSent) {
+      res.status(500).json({ error: `服务器错误：${err.message}` });
+    } else {
+      try { res.write(`data: ${JSON.stringify({ err: err.message })}\n\n`); } catch {}
+      res.end();
+    }
   }
 }
 
 // ── Anthropic Claude ──────────────────────────────────────────────────────────
-async function handleClaude(system, messages) {
+async function handleClaude(system, messages, res) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return errJson(500, 'ANTHROPIC_API_KEY 未在 Vercel 环境变量中配置');
+  if (!apiKey) { res.status(500).json({ error: 'ANTHROPIC_API_KEY 未在 Vercel 环境变量中配置' }); return; }
 
   let upstream;
   try {
@@ -46,17 +48,17 @@ async function handleClaude(system, messages) {
       }),
     });
   } catch (err) {
-    return errJson(502, `无法连接 Anthropic：${err.message}`);
+    res.status(502).json({ error: `无法连接 Anthropic：${err.message}` }); return;
   }
 
   if (!upstream.ok) {
     const raw = await upstream.text();
     let msg = raw;
     try { msg = JSON.parse(raw).error?.message || raw; } catch {}
-    return errJson(upstream.status, msg);
+    res.status(upstream.status).json({ error: msg }); return;
   }
 
-  return streamSSE(upstream.body, line => {
+  await streamSSE(upstream.body, res, line => {
     try {
       const ev = JSON.parse(line);
       if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta') return ev.delta.text;
@@ -65,13 +67,12 @@ async function handleClaude(system, messages) {
 }
 
 // ── Google Gemini ─────────────────────────────────────────────────────────────
-async function handleGemini(system, messages) {
+async function handleGemini(system, messages, res) {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return errJson(500, 'GEMINI_API_KEY 未在 Vercel 环境变量中配置');
+  if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY 未在 Vercel 环境变量中配置' }); return; }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  // Map messages: assistant → model
   const contents = messages.map(m => ({
     role: m.role === 'assistant' ? 'model' : 'user',
     parts: [{ text: m.content }],
@@ -89,17 +90,17 @@ async function handleGemini(system, messages) {
       }),
     });
   } catch (err) {
-    return errJson(502, `无法连接 Gemini：${err.message}`);
+    res.status(502).json({ error: `无法连接 Gemini：${err.message}` }); return;
   }
 
   if (!upstream.ok) {
     const raw = await upstream.text();
     let msg = raw;
     try { msg = JSON.parse(raw).error?.message || raw; } catch {}
-    return errJson(upstream.status, msg);
+    res.status(upstream.status).json({ error: msg }); return;
   }
 
-  return streamSSE(upstream.body, line => {
+  await streamSSE(upstream.body, res, line => {
     try {
       const ev = JSON.parse(line);
       return ev.candidates?.[0]?.content?.parts?.[0]?.text;
@@ -108,52 +109,36 @@ async function handleGemini(system, messages) {
 }
 
 // ── Shared SSE streaming ──────────────────────────────────────────────────────
-function streamSSE(body, extractText) {
-  const { readable, writable } = new TransformStream();
-  const writer  = writable.getWriter();
-  const encoder = new TextEncoder();
+async function streamSSE(body, res, extractText) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'X-Accel-Buffering': 'no',
+  });
 
-  (async () => {
-    const reader  = body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    try {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop();
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          const raw = line.slice(6).trim();
-          if (!raw || raw === '[DONE]') continue;
-          const text = extractText(raw);
-          if (text) await writer.write(encoder.encode(`data: ${JSON.stringify({ t: text })}\n\n`));
-        }
+  const reader  = body.getReader();
+  const decoder = new TextDecoder();
+  let buf = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const raw = line.slice(6).trim();
+        if (!raw || raw === '[DONE]') continue;
+        const text = extractText(raw);
+        if (text) res.write(`data: ${JSON.stringify({ t: text })}\n\n`);
       }
-      await writer.write(encoder.encode('data: [DONE]\n\n'));
-    } catch (err) {
-      try {
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ err: err.message })}\n\n`));
-      } catch {}
-    } finally {
-      try { await writer.close(); } catch {}
     }
-  })();
-
-  return new Response(readable, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'X-Accel-Buffering': 'no',
-    },
-  });
-}
-
-function errJson(status, msg) {
-  return new Response(JSON.stringify({ error: msg }), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+    res.write('data: [DONE]\n\n');
+  } catch (err) {
+    try { res.write(`data: ${JSON.stringify({ err: err.message })}\n\n`); } catch {}
+  } finally {
+    res.end();
+  }
 }
