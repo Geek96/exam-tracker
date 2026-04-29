@@ -441,9 +441,31 @@
     </div>
   </div>
 
+  <!-- Floating MinerU job tracker (fixed top-right) -->
+  <div id="mineruFloat" style="display:none">
+    <div class="mf-badge" id="mfBadge">
+      <div class="mf-steps-mini">
+        <span class="mf-dot-mini" id="mfDot1"></span>
+        <span class="mf-line-mini"></span>
+        <span class="mf-dot-mini" id="mfDot2"></span>
+        <span class="mf-line-mini"></span>
+        <span class="mf-dot-mini" id="mfDot3"></span>
+      </div>
+      <span class="mf-badge-label" id="mfBadgeLabel">AI 解析中</span>
+      <span class="mf-expand-icon" id="mfExpandIcon">▼</span>
+    </div>
+    <div class="mf-panel" id="mfPanel" style="display:none">
+      <div class="mf-panel-header">
+        <span class="mf-panel-title">🤖 AI 解析任务</span>
+        <button class="mf-close-btn" id="mfCollapseBtn">▲ 收起</button>
+      </div>
+      <div class="mf-jobs-list" id="mfJobsList"></div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="course.js?v=4"></script>
+  <script src="course.js?v=5"></script>
 </body>
 </html>

@@ -330,17 +330,121 @@ let currentPdfArrayBuffer = null;
 let mineruTaskId = null;
 let mineruPollTimer = null;
 let mineruContent = null;
+let currentTocJobId = null;
+
+// ── MinerU Job Manager (floats at top-right) ───────────────────────────────────
+let mjSeq = 0;
+const mjJobs = new Map();
+
+function mjCreate(label, type) {
+  const id = 'mj' + (++mjSeq);
+  mjJobs.set(id, { id, label, type, step: 1, status: '准备中…', done: false, failed: false, mdContent: null, needsRange: false, pollTimer: null });
+  mjRender();
+  return id;
+}
+function mjUpdate(id, patch) {
+  const j = mjJobs.get(id);
+  if (!j) return;
+  Object.assign(j, patch);
+  mjRender();
+}
+function mjRender() {
+  const jobs = [...mjJobs.values()];
+  const float = document.getElementById('mineruFloat');
+  if (!float) return;
+  if (jobs.length === 0) { float.style.display = 'none'; return; }
+  float.style.display = 'flex';
+
+  // Badge dots: show state of latest active job (or last job)
+  const active = jobs.filter(j => !j.done && !j.failed);
+  const latest = active.length ? active[active.length - 1] : jobs[jobs.length - 1];
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById('mfDot' + i);
+    if (!dot) continue;
+    const cls = ['mf-dot-mini'];
+    if (i < latest.step)                               cls.push('done');
+    else if (i === latest.step && latest.failed)       cls.push('fail');
+    else if (i === latest.step && !latest.done)        cls.push('active');
+    dot.className = cls.join(' ');
+  }
+  const lbl = document.getElementById('mfBadgeLabel');
+  if (lbl) {
+    if (active.length === 0) lbl.textContent = '任务已完成';
+    else if (active.length === 1) {
+      const s = latest.label.length > 14 ? latest.label.slice(0, 14) + '…' : latest.label;
+      lbl.textContent = s;
+    } else lbl.textContent = `${active.length} 个任务进行中`;
+  }
+
+  // Rebuild expanded job list
+  const list = document.getElementById('mfJobsList');
+  if (!list) return;
+  list.innerHTML = '';
+  ;[...jobs].reverse().forEach(j => {
+    const item = document.createElement('div');
+    item.className = 'mf-job-item' + (j.done ? ' j-done' : j.failed ? ' j-failed' : '');
+    const stepsHtml = [1,2,3].map(i => {
+      const dc = i < j.step ? 'done' : (i === j.step && j.failed ? 'fail' : (i === j.step && !j.done ? 'active' : ''));
+      return `<span class="mf-dot-mini${dc ? ' ' + dc : ''}"></span>${i < 3 ? '<span class="mf-line-mini"></span>' : ''}`;
+    }).join('');
+    item.innerHTML = `<div class="mf-job-label">${escHtml(j.label)}</div><div class="mf-job-steps">${stepsHtml}</div><div class="mf-job-status">${escHtml(j.status)}</div>`;
+    if (j.needsRange) {
+      const btn = document.createElement('button');
+      btn.className = 'mf-job-action';
+      btn.textContent = '配置目录 →';
+      btn.addEventListener('click', () => {
+        mfSetExpanded(false);
+        // Restore modal at range input
+        openPdfModal();
+        showSubstate('mineru');
+        setMineruStep(3);
+        setMineruStatus('✅ 解析完成！请输入章节范围描述，然后点击「生成目录结构」：');
+        document.getElementById('mineruRangeSection').style.display = 'flex';
+        mineruContent = j.mdContent;
+        currentTocJobId = j.id;
+        j.needsRange = false;
+        mjRender();
+      });
+      item.appendChild(btn);
+    }
+    if (j.done || j.failed) {
+      const db = document.createElement('button');
+      db.className = 'mf-dismiss-btn';
+      db.textContent = '✕';
+      db.title = '关闭';
+      db.addEventListener('click', () => { mjJobs.delete(j.id); mjRender(); });
+      item.appendChild(db);
+    }
+    list.appendChild(item);
+  });
+}
+
+let mfExpanded = false;
+function mfSetExpanded(v) {
+  mfExpanded = v;
+  const panel = document.getElementById('mfPanel');
+  const icon  = document.getElementById('mfExpandIcon');
+  if (panel) panel.style.display = mfExpanded ? 'block' : 'none';
+  if (icon)  icon.textContent    = mfExpanded ? '▲' : '▼';
+}
+document.getElementById('mfBadge').addEventListener('click', () => mfSetExpanded(!mfExpanded));
+document.getElementById('mfCollapseBtn').addEventListener('click', () => mfSetExpanded(false));
 
 // ── Open / close ──────────────────────────────────────────────────────────────
 const pdfModal         = document.getElementById('pdfModal');
 const pdfMineruProcess = document.getElementById('pdfMineruProcess');
 
 function openPdfModal() {
-  resetStep1();
+  if (!currentTocJobId) resetStep1();
+  else resetStep1UI();
   showStep(1);
   pdfModal.classList.add('open');
 }
-function closePdfModal() { pdfModal.classList.remove('open'); }
+function closePdfModal() {
+  pdfModal.classList.remove('open');
+  if (currentTocJobId) resetStep1UI();
+  else resetStep1();
+}
 
 document.getElementById('pdfModalClose1').addEventListener('click', closePdfModal);
 document.getElementById('pdfModalClose2').addEventListener('click', closePdfModal);
@@ -359,13 +463,9 @@ const pdfError    = document.getElementById('pdfError');
 const pdfNoOutline= document.getElementById('pdfNoOutline');
 const step1Footer = document.getElementById('step1Footer');
 
-function resetStep1() {
+function resetStep1UI() {
   extractedOutline = null;
   pdfFileName = '';
-  currentPdfArrayBuffer = null;
-  clearInterval(mineruPollTimer);
-  mineruTaskId = null;
-  mineruContent = null;
   document.getElementById('mineruRangeSection').style.display = 'none';
   document.getElementById('mineruRangeInput').value = '';
   document.getElementById('btnMineruGenTOC').disabled = false;
@@ -374,6 +474,14 @@ function resetStep1() {
   document.getElementById('tocFileName').textContent = '';
   document.getElementById('rangeStart').value = '';
   document.getElementById('rangeEnd').value   = '';
+}
+function resetStep1() {
+  resetStep1UI();
+  currentPdfArrayBuffer = null;
+  clearInterval(mineruPollTimer);
+  mineruTaskId = null;
+  mineruContent = null;
+  currentTocJobId = null;
 }
 
 function showSubstate(state) {
@@ -431,8 +539,8 @@ async function handlePdfFile(file) {
 
   try {
     const buf = await file.arrayBuffer();
-    currentPdfArrayBuffer = buf;  // store for MinerU path
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    currentPdfArrayBuffer = buf;  // store for MinerU path (keep original; give pdfjs a copy to transfer)
+    const pdf = await pdfjsLib.getDocument({ data: buf.slice(0) }).promise;
     const outline = await pdf.getOutline();
 
     if (!outline || outline.length === 0) {
@@ -480,6 +588,8 @@ async function startMineruFlow() {
   document.getElementById('mineruRangeSection').style.display = 'none';
 
   const pdfBase64 = arrayBufferToBase64(currentPdfArrayBuffer);
+  const jobLabel = (pdfFileName || 'PDF').replace(/\.pdf$/i, '') + ' 目录提取';
+  currentTocJobId = mjCreate(jobLabel, 'toc');
 
   try {
     const res = await fetch('/api/mineru-submit', {
@@ -493,10 +603,13 @@ async function startMineruFlow() {
     mineruTaskId = data.taskId;
     setMineruStep(2);
     setMineruStatus('MinerU 正在解析文档，请耐心等待（通常需要 30–120 秒）…');
+    mjUpdate(currentTocJobId, { step: 2, status: 'MinerU 解析中…（可关闭此弹窗，进度显示于右上角）' });
     clearInterval(mineruPollTimer);
     mineruPollTimer = setInterval(pollMineruResult, 6000);
   } catch (err) {
     setMineruStatus('❌ 上传失败：' + err.message);
+    mjUpdate(currentTocJobId, { failed: true, status: '❌ 上传失败：' + err.message });
+    currentTocJobId = null;
   }
 }
 
@@ -509,18 +622,33 @@ async function pollMineruResult() {
     if (data.status === 'done') {
       clearInterval(mineruPollTimer);
       mineruContent = data.content;
+
       if (!mineruContent) {
-        setMineruStatus('❌ MinerU 返回内容为空，请尝试其他 PDF');
+        const msg = '❌ MinerU 返回内容为空，请尝试其他 PDF';
+        if (pdfModal.classList.contains('open')) setMineruStatus(msg);
+        if (currentTocJobId) mjUpdate(currentTocJobId, { failed: true, status: msg });
         return;
       }
-      setMineruStep(3);
-      setMineruStatus('✅ 解析完成！请输入章节范围描述，然后点击「生成目录结构」：');
-      document.getElementById('mineruRangeSection').style.display = 'flex';
+
+      if (currentTocJobId) {
+        mjUpdate(currentTocJobId, { step: 3, status: '✅ 解析完成，点击「配置目录 →」继续', needsRange: true, mdContent: mineruContent });
+        mfSetExpanded(true);
+      }
+      if (pdfModal.classList.contains('open')) {
+        setMineruStep(3);
+        setMineruStatus('✅ 解析完成！请输入章节范围描述，然后点击「生成目录结构」：');
+        document.getElementById('mineruRangeSection').style.display = 'flex';
+      }
     } else if (data.status === 'failed') {
       clearInterval(mineruPollTimer);
-      setMineruStatus('❌ 解析失败：' + (data.error || '未知错误'));
+      const msg = '❌ 解析失败：' + (data.error || '未知错误');
+      if (pdfModal.classList.contains('open')) setMineruStatus(msg);
+      if (currentTocJobId) mjUpdate(currentTocJobId, { failed: true, status: msg });
+    } else {
+      // pending — update progress text
+      const prog = data.progress ? ` ${data.progress}%` : '';
+      if (currentTocJobId) mjUpdate(currentTocJobId, { status: `MinerU 解析中…${prog}` });
     }
-    // pending → keep polling
   } catch {
     // Network hiccup — will retry next interval
   }
@@ -577,6 +705,12 @@ document.getElementById('btnMineruGenTOC').addEventListener('click', async () =>
       await saveMdAsMaterial(mineruContent, mdName);
     }
 
+    if (currentTocJobId) {
+      mjUpdate(currentTocJobId, { done: true, step: 3, needsRange: false, status: '✅ 目录已导入' });
+      setTimeout(() => { mjJobs.delete(currentTocJobId); mjRender(); }, 4000);
+      currentTocJobId = null;
+    }
+
     // Proceed to step 2 — keep MinerU UI hidden
     showSubstate('drop');
     onOutlineReady();
@@ -590,6 +724,11 @@ document.getElementById('btnMineruBack').addEventListener('click', () => {
   clearInterval(mineruPollTimer);
   mineruTaskId = null;
   mineruContent = null;
+  if (currentTocJobId) {
+    mjUpdate(currentTocJobId, { failed: true, status: '已取消' });
+    setTimeout(() => { mjJobs.delete(currentTocJobId); mjRender(); }, 3000);
+    currentTocJobId = null;
+  }
   document.getElementById('mineruRangeSection').style.display = 'none';
   document.getElementById('btnMineruGenTOC').disabled = false;
   showSubstate('noOutline');
@@ -1233,20 +1372,87 @@ async function renderMaterials() {
 }
 
 async function uploadMaterialFiles(fileList) {
-  for (const file of fileList) {
+  const pdfs = [], others = [];
+  for (const f of fileList) {
+    if (f.name.toLowerCase().endsWith('.pdf')) pdfs.push(f);
+    else others.push(f);
+  }
+
+  // Non-PDF files: save directly
+  for (const file of others) {
     const data = await file.arrayBuffer();
     await dbSave({
       id: `mat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-      courseId,
-      name: file.name,
+      courseId, name: file.name,
       type: file.type || 'application/octet-stream',
-      size: file.size,
-      data,
-      addedAt: new Date().toISOString(),
+      size: file.size, data, addedAt: new Date().toISOString(),
     });
   }
-  await renderMaterials();
-  showToast(`已上传 ${fileList.length} 个文件`);
+  if (others.length) {
+    await renderMaterials();
+    showToast(`已上传 ${others.length} 个文件`);
+  }
+
+  // PDFs: convert to Markdown via MinerU (background)
+  for (const file of pdfs) {
+    showToast(`📄 ${file.name} → 正在转换为 Markdown…`);
+    startMaterialMineruJob(file);
+  }
+}
+
+async function startMaterialMineruJob(file) {
+  const baseName = file.name.replace(/\.pdf$/i, '');
+  const jobId = mjCreate(baseName + ' → MD', 'material');
+
+  try {
+    const buf = await file.arrayBuffer();
+    const pdfBase64 = arrayBufferToBase64(buf);
+    mjUpdate(jobId, { step: 1, status: '正在上传…' });
+
+    const res = await fetch('/api/mineru-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdfBase64, filename: file.name }),
+    });
+    const d = await res.json();
+    if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
+
+    const taskId = d.taskId;
+    mjUpdate(jobId, { step: 2, status: 'MinerU 解析中…' });
+
+    const timer = setInterval(async () => {
+      const j = mjJobs.get(jobId);
+      if (!j || j.done || j.failed) { clearInterval(timer); return; }
+      try {
+        const r    = await fetch(`/api/mineru-result?taskId=${encodeURIComponent(taskId)}`);
+        const data = await r.json();
+        if (data.status === 'done') {
+          clearInterval(timer);
+          if (!data.content) {
+            mjUpdate(jobId, { failed: true, status: '❌ MinerU 返回内容为空' });
+            return;
+          }
+          mjUpdate(jobId, { step: 3, status: '正在保存…' });
+          const mdName = baseName + '_MinerU.md';
+          await saveMdAsMaterial(data.content, mdName);
+          mjUpdate(jobId, { done: true, status: `✅ 已保存为 ${mdName}` });
+          setTimeout(() => { mjJobs.delete(jobId); mjRender(); }, 5000);
+        } else if (data.status === 'failed') {
+          clearInterval(timer);
+          mjUpdate(jobId, { failed: true, status: '❌ ' + (data.error || '解析失败') });
+        } else {
+          const prog = data.progress ? ` ${data.progress}%` : '';
+          mjUpdate(jobId, { status: `MinerU 解析中…${prog}` });
+        }
+      } catch { /* network hiccup */ }
+    }, 6000);
+
+    const jobj = mjJobs.get(jobId);
+    if (jobj) jobj.pollTimer = timer;
+
+  } catch (err) {
+    mjUpdate(jobId, { failed: true, status: '❌ 失败：' + err.message });
+  }
 }
 
 // File input
@@ -1337,10 +1543,13 @@ async function loadMarkdownContext() {
     const all = await dbGetAll();
     const mds = all.filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'));
     if (!mds.length) return '';
-    return mds.map(f => {
+    const fileList = mds.map(f => f.name).join('、');
+    const header = `以下是课程「${escHtml(course.name)}」的课程资料文件，请在回答时优先参考相关文件内容（可用文件：${fileList}）：\n\n`;
+    const bodies = mds.map(f => {
       const text = new TextDecoder().decode(f.data);
       return `--- 文件：${f.name} ---\n${text.slice(0, 15000)}`;
     }).join('\n\n');
+    return header + bodies;
   } catch { return ''; }
 }
 
