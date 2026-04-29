@@ -4,7 +4,7 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-04-29  
-**当前版本**: `course.js?v=21`  
+**当前版本**: `course.js?v=22`  
 **部署状态**: ✅ 生产环境正常（Vercel）
 
 ---
@@ -15,7 +15,7 @@
 |---|---|---|
 | 课程列表 & 管理 | ✅ 正常 | |
 | 章节目录（PDF 书签导入）| ✅ 正常 | |
-| 章节目录（MinerU AI 提取）| ✅ 正常 | 使用 litterbox.catbox.moe 上传 |
+| 章节目录（MinerU AI 提取）| ✅ 正常 | 上传链：litterbox.catbox.moe → 0x0.st（自动 fallback）|
 | 章节目录（手动添加）| ✅ 正常 | |
 | 章节完成度追踪 | ✅ 正常 | |
 | 课程资料上传 | ✅ 正常 | |
@@ -52,9 +52,9 @@
 ## 近期变更（最新 3 次提交）
 
 ```
+a3fc715  docs: require agents to read STATUS.md and ROADMAP.md at session start
+ad0c088  fix: add 0x0.st fallback for PDF upload (litterbox 504 timeout)
 7bd2b73  Fix i18n gaps, upload SSL error, and welcome page entry
-775b122  Complete i18n coverage for all UI text across zh/en/es
-e50038d  Add conversation history panel, welcome page, and i18n support
 ```
 
 ---
