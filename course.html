@@ -86,10 +86,10 @@
         <div class="materials-section-inline">
           <div class="materials-toolbar-inline">
             <h3 class="materials-title-sm">课程资料</h3>
-            <label class="btn-sm accent materials-upload-btn" for="materialFileInput">+ 上传</label>
+            <label class="btn-sm accent materials-upload-btn" for="materialFileInput">PDF 转换</label>
             <input type="file" id="materialFileInput" multiple
               accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp" style="display:none" />
-            <label class="btn-sm materials-upload-btn materials-html-btn" for="materialHtmlInput" title="上传 HTML 文件，通过 MinerU 转换为 Markdown">⟨/⟩ HTML</label>
+            <label class="btn-sm materials-upload-btn materials-html-btn" for="materialHtmlInput" title="上传 HTML 文件，通过 MinerU 转换为 Markdown">HTML 转换</label>
             <input type="file" id="materialHtmlInput" multiple accept=".html,.htm" style="display:none" />
           </div>
           <div class="materials-drop-zone materials-drop-inline" id="materialsDropZone">
@@ -308,7 +308,7 @@
                 placeholder="例如：从第3章微分方程到非线性微分方程通解&#10;或：第3章和第4章全部内容"></textarea>
               <button class="btn-submit" id="btnMineruGenTOC" style="margin-top:10px">✨ 生成目录结构</button>
             </div>
-            <button class="btn-cancel" id="btnMineruBack" style="margin-top:14px">← 返回</button>
+            <button class="btn-cancel" id="btnMineruBack" style="margin-top:14px">✕ 取消并返回</button>
           </div>
 
         </div>
@@ -468,6 +468,6 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="course.js?v=7"></script>
+  <script src="course.js?v=8"></script>
 </body>
 </html>
