@@ -637,79 +637,56 @@ async function startMineruFlow() {
 
   showSubstate('mineru');
   setMineruStep(1);
-  setMineruStatus('正在上传文件…');
+  setMineruStatus('正在分析 PDF…');
   document.getElementById('mineruRangeSection').style.display = 'none';
 
   const jobLabel = (pdfFileName || 'PDF').replace(/\.pdf$/i, '') + ' 目录提取';
   currentTocJobId = mjCreate(jobLabel, 'toc');
+  const tocJobId = currentTocJobId;
+
+  const isCancelled = () => {
+    const j = mjJobs.get(tocJobId);
+    return !j || j.failed;
+  };
 
   try {
-    const fileUrl = await uploadToTmpfiles(
-      currentPdfArrayBuffer,
-      pdfFileName || 'upload.pdf',
-      'application/pdf'
-    );
-    const res = await fetch('/api/mineru-submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: fileUrl, filename: pdfFileName || 'upload.pdf' }),
-    });
-    let data;
-    try { data = await res.json(); }
-    catch { throw new Error(`提交失败 (HTTP ${res.status})`); }
-    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    const chunks = await splitPdfIfNeeded(currentPdfArrayBuffer, 200);
+    const total = chunks.length;
+    if (total > 1) setMineruStatus(`PDF 共 ${total} 部分，将依次处理…`);
 
-    mineruTaskId = data.taskId;
-    setMineruStep(2);
-    setMineruStatus('MinerU 正在解析文档，请耐心等待（通常需要 30–120 秒）…');
-    mjUpdate(currentTocJobId, { step: 2, status: 'MinerU 解析中…（可关闭此弹窗，进度显示于右上角）' });
-    clearInterval(mineruPollTimer);
-    mineruPollTimer = setInterval(pollMineruResult, 6000);
-  } catch (err) {
-    setMineruStatus('❌ 上传失败：' + err.message);
-    mjUpdate(currentTocJobId, { failed: true, status: '❌ 上传失败：' + err.message });
-    currentTocJobId = null;
-  }
-}
+    const markdowns = [];
+    for (let i = 0; i < total; i++) {
+      const prefix = total > 1 ? `[${i + 1}/${total}] ` : '';
+      const step = i < Math.ceil(total / 2) ? 1 : 2;
+      setMineruStep(step);
+      const chunkName = (pdfFileName || 'upload.pdf').replace(/\.pdf$/i,
+        total > 1 ? `_p${i + 1}.pdf` : '.pdf');
 
-async function pollMineruResult() {
-  if (!mineruTaskId) return;
-  try {
-    const res = await fetch(`/api/mineru-result?taskId=${encodeURIComponent(mineruTaskId)}`);
-    const data = await res.json();
-
-    if (data.status === 'done') {
-      clearInterval(mineruPollTimer);
-      mineruContent = data.content;
-
-      if (!mineruContent) {
-        const msg = '❌ MinerU 返回内容为空，请尝试其他 PDF';
-        if (pdfModal.classList.contains('open')) setMineruStatus(msg);
-        if (currentTocJobId) mjUpdate(currentTocJobId, { failed: true, status: msg });
-        return;
-      }
-
-      if (currentTocJobId) {
-        mjUpdate(currentTocJobId, { step: 3, status: '✅ 解析完成，点击「配置目录 →」继续', needsRange: true, mdContent: mineruContent });
-        mfSetExpanded(true);
-      }
-      if (pdfModal.classList.contains('open')) {
-        setMineruStep(3);
-        setMineruStatus('✅ 解析完成！请输入章节范围描述，然后点击「生成目录结构」：');
-        document.getElementById('mineruRangeSection').style.display = 'flex';
-      }
-    } else if (data.status === 'failed') {
-      clearInterval(mineruPollTimer);
-      const msg = '❌ 解析失败：' + (data.error || '未知错误');
-      if (pdfModal.classList.contains('open')) setMineruStatus(msg);
-      if (currentTocJobId) mjUpdate(currentTocJobId, { failed: true, status: msg });
-    } else {
-      // pending — update progress text
-      const prog = data.progress ? ` ${data.progress}%` : '';
-      if (currentTocJobId) mjUpdate(currentTocJobId, { status: `MinerU 解析中…${prog}` });
+      const md = await mineruSubmitAndPoll(
+        chunks[i], chunkName, 'pdf',
+        msg => {
+          setMineruStatus(prefix + msg);
+          mjUpdate(tocJobId, { step, status: prefix + msg });
+        },
+        isCancelled
+      );
+      markdowns.push(md);
     }
-  } catch {
-    // Network hiccup — will retry next interval
+
+    mineruContent = markdowns.join('\n\n');
+    mjUpdate(tocJobId, { step: 3, status: '✅ 解析完成，点击「配置目录 →」继续', needsRange: true, mdContent: mineruContent });
+    mfSetExpanded(true);
+    if (pdfModal.classList.contains('open')) {
+      setMineruStep(3);
+      setMineruStatus('✅ 解析完成！请输入章节范围描述，然后点击「生成目录结构」：');
+      document.getElementById('mineruRangeSection').style.display = 'flex';
+    }
+  } catch (err) {
+    if (err.cancelled) return;
+    const msg = '❌ ' + err.message;
+    if (pdfModal.classList.contains('open')) setMineruStatus(msg);
+    mjUpdate(tocJobId, { failed: true, status: msg });
+    currentTocJobId = null;
   }
 }
 
@@ -794,6 +771,64 @@ document.getElementById('btnMineruBack').addEventListener('click', () => {
   document.getElementById('btnMineruGenTOC').disabled = false;
   showSubstate('noOutline');
 });
+
+// Split a PDF ArrayBuffer into ≤maxPages chunks using pdf-lib.
+// Returns an array of ArrayBuffers (length 1 if no split needed).
+async function splitPdfIfNeeded(arrayBuffer, maxPages) {
+  const { PDFDocument } = PDFLib;
+  const srcDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+  const total = srcDoc.getPageCount();
+  if (total <= maxPages) return [arrayBuffer];
+
+  const chunks = [];
+  for (let start = 0; start < total; start += maxPages) {
+    const end = Math.min(start + maxPages, total);
+    const doc = await PDFDocument.create();
+    const indices = Array.from({ length: end - start }, (_, i) => start + i);
+    const pages = await doc.copyPages(srcDoc, indices);
+    pages.forEach(p => doc.addPage(p));
+    const bytes = await doc.save();
+    chunks.push(bytes.buffer);
+  }
+  return chunks;
+}
+
+// Upload → MinerU submit → poll until done. Returns markdown string.
+// onStatus(msg) is called with progress updates.
+// isCancelled() should return true if the job was cancelled.
+async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isCancelled) {
+  const mimeType = fileType === 'html' ? 'text/html' : 'application/pdf';
+  onStatus('正在上传…');
+  const fileUrl = await uploadToTmpfiles(fileBuffer, filename, mimeType);
+  if (isCancelled()) throw Object.assign(new Error('已取消'), { cancelled: true });
+
+  onStatus('提交至 MinerU…');
+  const res = await fetch('/api/mineru-submit', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: fileUrl, filename, fileType: fileType || 'pdf' }),
+  });
+  let data;
+  try { data = await res.json(); }
+  catch { throw new Error(`提交失败 (HTTP ${res.status})`); }
+  if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+  const taskId = data.taskId;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    await new Promise(r => setTimeout(r, 6000));
+    if (isCancelled()) throw Object.assign(new Error('已取消'), { cancelled: true });
+    const r = await fetch(`/api/mineru-result?taskId=${encodeURIComponent(taskId)}`);
+    const result = await r.json();
+    if (result.status === 'done') {
+      if (!result.content) throw new Error('MinerU 返回内容为空');
+      return result.content;
+    }
+    if (result.status === 'failed') throw new Error('MinerU 处理失败：' + (result.error || ''));
+    const prog = result.progress ? ` ${result.progress}%` : '';
+    onStatus(`MinerU 解析中…${prog}`);
+  }
+  throw new Error('MinerU 处理超时（超过 12 分钟）');
+}
 
 async function uploadToTmpfiles(arrayBuffer, filename, mimeType) {
   const blob = new Blob([arrayBuffer], { type: mimeType });
@@ -1481,56 +1516,44 @@ async function startMaterialMineruJob(file, fileType) {
   const baseName = file.name.replace(ext, '');
   const jobId = mjCreate(baseName + ' → MD', 'material');
 
+  const isCancelled = () => { const j = mjJobs.get(jobId); return !j || j.failed; };
+
   try {
     const buf = await file.arrayBuffer();
-    mjUpdate(jobId, { step: 1, status: '正在上传…' });
-    const mimeType = isHtml ? 'text/html' : 'application/pdf';
-    const fileUrl = await uploadToTmpfiles(buf, file.name, mimeType);
+    mjUpdate(jobId, { step: 1, status: '正在分析…' });
 
-    const res = await fetch('/api/mineru-submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: fileUrl, filename: file.name, fileType: fileType || 'pdf' }),
-    });
-    let d;
-    try { d = await res.json(); }
-    catch { throw new Error(`提交失败 (HTTP ${res.status})`); }
-    if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
+    let combinedMarkdown;
+    if (isHtml) {
+      combinedMarkdown = await mineruSubmitAndPoll(
+        buf, file.name, 'html',
+        msg => mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: msg }),
+        isCancelled
+      );
+    } else {
+      const chunks = await splitPdfIfNeeded(buf, 200);
+      const total = chunks.length;
+      const markdowns = [];
+      for (let i = 0; i < total; i++) {
+        const prefix = total > 1 ? `[${i + 1}/${total}] ` : '';
+        const chunkName = file.name.replace(/\.pdf$/i, total > 1 ? `_p${i + 1}.pdf` : '.pdf');
+        const md = await mineruSubmitAndPoll(
+          chunks[i], chunkName, 'pdf',
+          msg => mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: prefix + msg }),
+          isCancelled
+        );
+        markdowns.push(md);
+      }
+      combinedMarkdown = markdowns.join('\n\n');
+    }
 
-    const taskId = d.taskId;
-    mjUpdate(jobId, { step: 2, status: 'MinerU 解析中…' });
-
-    const timer = setInterval(async () => {
-      const j = mjJobs.get(jobId);
-      if (!j || j.done || j.failed) { clearInterval(timer); return; }
-      try {
-        const r    = await fetch(`/api/mineru-result?taskId=${encodeURIComponent(taskId)}`);
-        const data = await r.json();
-        if (data.status === 'done') {
-          clearInterval(timer);
-          if (!data.content) {
-            mjUpdate(jobId, { failed: true, status: '❌ MinerU 返回内容为空' });
-            return;
-          }
-          mjUpdate(jobId, { step: 3, status: '正在保存…' });
-          const mdName = baseName + '_MinerU.md';
-          await saveMdAsMaterial(data.content, mdName);
-          mjUpdate(jobId, { done: true, status: `✅ 已保存为 ${mdName}` });
-          setTimeout(() => { mjJobs.delete(jobId); mjRender(); }, 5000);
-        } else if (data.status === 'failed') {
-          clearInterval(timer);
-          mjUpdate(jobId, { failed: true, status: '❌ ' + (data.error || '解析失败') });
-        } else {
-          const prog = data.progress ? ` ${data.progress}%` : '';
-          mjUpdate(jobId, { status: `MinerU 解析中…${prog}` });
-        }
-      } catch { /* network hiccup */ }
-    }, 6000);
-
-    const jobj = mjJobs.get(jobId);
-    if (jobj) jobj.pollTimer = timer;
+    mjUpdate(jobId, { step: 3, status: '正在保存…' });
+    const mdName = baseName + '_MinerU.md';
+    await saveMdAsMaterial(combinedMarkdown, mdName);
+    mjUpdate(jobId, { done: true, status: `✅ 已保存为 ${mdName}` });
+    setTimeout(() => { mjJobs.delete(jobId); mjRender(); }, 5000);
 
   } catch (err) {
+    if (err.cancelled) return;
     mjUpdate(jobId, { failed: true, status: '❌ 失败：' + err.message });
   }
 }
