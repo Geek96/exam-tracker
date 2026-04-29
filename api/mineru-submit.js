@@ -73,7 +73,7 @@ async function handler(req, res) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ url: pdfUrl, model_version: 'MinerU-HTML' }),
+      body: JSON.stringify({ url: pdfUrl, model_version: 'pipeline' }),
       signal: AbortSignal.timeout(20000),
     });
     const minData = await minRes.json();
