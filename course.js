@@ -635,31 +635,28 @@ document.getElementById('btnMineruExtract').addEventListener('click', startMiner
 async function startMineruFlow() {
   if (!currentPdfArrayBuffer) return;
 
-  const MAX_PDF_BYTES = 3.2 * 1024 * 1024;
-  if (currentPdfArrayBuffer.byteLength > MAX_PDF_BYTES) {
-    const mb = (currentPdfArrayBuffer.byteLength / 1024 / 1024).toFixed(1);
-    showError(`PDF 文件过大（${mb}MB），AI 提取仅支持 3.2MB 以内的文件，请使用手动粘贴目录方式。`);
-    return;
-  }
-
   showSubstate('mineru');
   setMineruStep(1);
   setMineruStatus('正在上传文件…');
   document.getElementById('mineruRangeSection').style.display = 'none';
 
-  const pdfBase64 = arrayBufferToBase64(currentPdfArrayBuffer);
   const jobLabel = (pdfFileName || 'PDF').replace(/\.pdf$/i, '') + ' 目录提取';
   currentTocJobId = mjCreate(jobLabel, 'toc');
 
   try {
+    const fileUrl = await uploadToTmpfiles(
+      currentPdfArrayBuffer,
+      pdfFileName || 'upload.pdf',
+      'application/pdf'
+    );
     const res = await fetch('/api/mineru-submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfBase64, filename: pdfFileName || 'upload.pdf' }),
+      body: JSON.stringify({ url: fileUrl, filename: pdfFileName || 'upload.pdf' }),
     });
     let data;
     try { data = await res.json(); }
-    catch { throw new Error(`上传失败 (HTTP ${res.status})，文件可能超出大小限制（最大 3.2MB）`); }
+    catch { throw new Error(`提交失败 (HTTP ${res.status})`); }
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
     mineruTaskId = data.taskId;
@@ -797,6 +794,20 @@ document.getElementById('btnMineruBack').addEventListener('click', () => {
   document.getElementById('btnMineruGenTOC').disabled = false;
   showSubstate('noOutline');
 });
+
+async function uploadToTmpfiles(arrayBuffer, filename, mimeType) {
+  const blob = new Blob([arrayBuffer], { type: mimeType });
+  const formData = new FormData();
+  formData.append('file', blob, filename);
+  const upRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+    method: 'POST',
+    body: formData,
+  });
+  if (!upRes.ok) throw new Error(`文件上传失败：HTTP ${upRes.status}`);
+  const upData = await upRes.json();
+  if (upData.status !== 'success' || !upData.data?.url) throw new Error('上传服务返回异常');
+  return upData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+}
 
 function arrayBufferToBase64(buf) {
   const bytes = new Uint8Array(buf);
@@ -1472,21 +1483,18 @@ async function startMaterialMineruJob(file, fileType) {
 
   try {
     const buf = await file.arrayBuffer();
-    const pdfBase64 = arrayBufferToBase64(buf);
     mjUpdate(jobId, { step: 1, status: '正在上传…' });
+    const mimeType = isHtml ? 'text/html' : 'application/pdf';
+    const fileUrl = await uploadToTmpfiles(buf, file.name, mimeType);
 
-    if (buf.byteLength > 3.2 * 1024 * 1024) {
-      const mb = (buf.byteLength / 1024 / 1024).toFixed(1);
-      throw new Error(`文件过大（${mb}MB），MinerU 转换仅支持 3.2MB 以内的文件`);
-    }
     const res = await fetch('/api/mineru-submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfBase64, filename: file.name, fileType: fileType || 'pdf' }),
+      body: JSON.stringify({ url: fileUrl, filename: file.name, fileType: fileType || 'pdf' }),
     });
     let d;
     try { d = await res.json(); }
-    catch { throw new Error(`上传失败 (HTTP ${res.status})，文件可能超出大小限制（最大 3.2MB）`); }
+    catch { throw new Error(`提交失败 (HTTP ${res.status})`); }
     if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
 
     const taskId = d.taskId;
