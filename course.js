@@ -650,7 +650,7 @@ async function startMineruFlow() {
   };
 
   try {
-    const chunks = await splitPdfIfNeeded(currentPdfArrayBuffer, 200);
+    const chunks = await splitPdfIfNeeded(currentPdfArrayBuffer, 199);
     const total = chunks.length;
     if (total > 1) setMineruStatus(`PDF 共 ${total} 部分，将依次处理…`);
 
@@ -1530,7 +1530,7 @@ async function startMaterialMineruJob(file, fileType) {
         isCancelled
       );
     } else {
-      const chunks = await splitPdfIfNeeded(buf, 200);
+      const chunks = await splitPdfIfNeeded(buf, 199);
       const total = chunks.length;
       const markdowns = [];
       for (let i = 0; i < total; i++) {
