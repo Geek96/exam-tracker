@@ -1666,11 +1666,22 @@ async function loadMarkdownContext() {
     if (!mds.length) return '';
     const fileList = mds.map(f => f.name).join('、');
     const header = `以下是课程「${escHtml(course.name)}」的课程资料文件，请在回答时优先参考相关文件内容（可用文件：${fileList}）：\n\n`;
-    const bodies = mds.map(f => {
+    const PER_FILE = 80000;
+    const TOTAL_CAP = 200000;
+    let total = 0;
+    const bodies = [];
+    for (const f of mds) {
+      if (total >= TOTAL_CAP) break;
       const text = new TextDecoder().decode(f.data);
-      return `--- 文件：${f.name} ---\n${text.slice(0, 15000)}`;
-    }).join('\n\n');
-    return header + bodies;
+      const allowed = Math.min(PER_FILE, TOTAL_CAP - total);
+      const chunk = text.slice(0, allowed);
+      const truncated = chunk.length < text.length;
+      bodies.push(
+        `--- 文件：${f.name}${truncated ? `（注意：文件较大，此处仅展示前 ${chunk.length} 字符，共 ${text.length} 字符，内容已截断）` : ''} ---\n${chunk}`
+      );
+      total += chunk.length;
+    }
+    return header + bodies.join('\n\n');
   } catch { return ''; }
 }
 
