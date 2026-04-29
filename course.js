@@ -840,19 +840,41 @@ async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isC
 }
 
 async function uploadToTmpfiles(arrayBuffer, filename, mimeType) {
-  const blob = new Blob([arrayBuffer], { type: mimeType });
-  const formData = new FormData();
-  formData.append('reqtype', 'fileupload');
-  formData.append('time', '72h');
-  formData.append('fileToUpload', blob, filename);
-  const upRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-    method: 'POST',
-    body: formData,
-  });
-  if (!upRes.ok) throw new Error(`文件上传失败：HTTP ${upRes.status}`);
-  const url = (await upRes.text()).trim();
-  if (!url.startsWith('https://')) throw new Error('上传服务返回异常：' + url.slice(0, 100));
-  return url;
+  const SERVICES = [
+    async () => {
+      const blob = new Blob([arrayBuffer], { type: mimeType });
+      const fd = new FormData();
+      fd.append('reqtype', 'fileupload');
+      fd.append('time', '72h');
+      fd.append('fileToUpload', blob, filename);
+      const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+        method: 'POST', body: fd, signal: AbortSignal.timeout(60000),
+      });
+      if (!r.ok) throw new Error(`litterbox HTTP ${r.status}`);
+      const url = (await r.text()).trim();
+      if (!url.startsWith('https://')) throw new Error('litterbox: ' + url.slice(0, 80));
+      return url;
+    },
+    async () => {
+      const blob = new Blob([arrayBuffer], { type: mimeType });
+      const fd = new FormData();
+      fd.append('file', blob, filename);
+      const r = await fetch('https://0x0.st', {
+        method: 'POST', body: fd, signal: AbortSignal.timeout(60000),
+      });
+      if (!r.ok) throw new Error(`0x0.st HTTP ${r.status}`);
+      const url = (await r.text()).trim();
+      if (!url.startsWith('https://')) throw new Error('0x0.st: ' + url.slice(0, 80));
+      return url;
+    },
+  ];
+
+  let lastErr;
+  for (const service of SERVICES) {
+    try { return await service(); }
+    catch (e) { lastErr = e; console.warn('[upload fallback]', e.message); }
+  }
+  throw new Error('所有上传服务均失败：' + lastErr.message);
 }
 
 function arrayBufferToBase64(buf) {
