@@ -2,39 +2,39 @@
 // Feeds MinerU output + user range description to Gemini.
 // Returns { chapters: [{title, sections:[{title, subsections:[{title}]}]}] }
 
-// Model chain — all on v1beta; dated versions are more stable than aliases
+// Model chain — all on v1beta
 const MODELS = [
-  { id: 'gemini-3-flash-preview',           api: 'v1beta' },
-  { id: 'gemini-2.5-flash-preview-04-17',   api: 'v1beta' },
-  { id: 'gemini-2.5-flash',                 api: 'v1beta' },
-  { id: 'gemini-2.0-flash-lite',            api: 'v1beta' },
+  { id: 'gemini-3-flash-preview', api: 'v1beta' },
+  { id: 'gemini-2.5-flash',       api: 'v1beta' },
 ];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// Robust JSON cleaner: strips fences, trailing commas, BOM, control chars
 function parseGeminiJson(raw) {
+  // Strip BOM, ALL code fences (not just outermost), control chars
   let text = raw
-    .replace(/^﻿/, '')                    // BOM
-    .replace(/^```(?:json)?\s*/im, '')         // opening fence
-    .replace(/\s*```\s*$/m, '')                // closing fence
-    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // stray control chars
+    .replace(/^﻿/, '')
+    .replace(/```json\s*/gi, '')
+    .replace(/```\s*/gi, '')
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
     .trim();
 
   // Strip trailing commas before } or ]
   text = text.replace(/,(\s*[}\]])/g, '$1');
 
-  // Direct parse attempt
   try { return JSON.parse(text); } catch {}
 
-  // Extract outermost [...] and retry
-  const m = text.match(/\[[\s\S]*\]/);
-  if (m) {
-    const cleaned = m[0].replace(/,(\s*[}\]])/g, '$1');
-    try { return JSON.parse(cleaned); } catch {}
+  // Slice from first '[' to last ']'
+  const s = text.indexOf('[');
+  const e = text.lastIndexOf(']');
+  if (s !== -1 && e > s) {
+    const slice = text.slice(s, e + 1).replace(/,(\s*[}\]])/g, '$1');
+    try { return JSON.parse(slice); } catch {}
   }
 
-  throw new Error('无法从 Gemini 响应中解析 JSON');
+  // Include a preview of the raw text in the error so we can diagnose
+  const preview = raw.slice(0, 400).replace(/\n/g, '\\n');
+  throw new Error(`无法解析JSON，模型回复：${preview}`);
 }
 
 async function callGemini(apiKey, { id: model, api = 'v1beta' }, prompt) {
