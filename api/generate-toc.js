@@ -22,19 +22,20 @@ function parseGeminiJson(raw) {
   // Strip trailing commas before } or ]
   text = text.replace(/,(\s*[}\]])/g, '$1');
 
-  try { return JSON.parse(text); } catch {}
+  let parseErr;
+  try { return JSON.parse(text); } catch (e) { parseErr = e; }
 
   // Slice from first '[' to last ']'
   const s = text.indexOf('[');
-  const e = text.lastIndexOf(']');
-  if (s !== -1 && e > s) {
-    const slice = text.slice(s, e + 1).replace(/,(\s*[}\]])/g, '$1');
-    try { return JSON.parse(slice); } catch {}
+  const eIdx = text.lastIndexOf(']');
+  if (s !== -1 && eIdx > s) {
+    const slice = text.slice(s, eIdx + 1).replace(/,(\s*[}\]])/g, '$1');
+    try { return JSON.parse(slice); } catch (e) { parseErr = e; }
   }
 
-  // Include a preview of the raw text in the error so we can diagnose
+  // Include parse error + preview of raw response for diagnosis
   const preview = raw.slice(0, 400).replace(/\n/g, '\\n');
-  throw new Error(`无法解析JSON，模型回复：${preview}`);
+  throw new Error(`无法解析JSON [${parseErr?.message}]，模型回复：${preview}`);
 }
 
 async function callGemini(apiKey, { id: model, api = 'v1beta' }, prompt) {
@@ -44,7 +45,7 @@ async function callGemini(apiKey, { id: model, api = 'v1beta' }, prompt) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 8192, temperature: 0.1 },
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.1, responseMimeType: 'application/json' },
     }),
     signal: AbortSignal.timeout(45000),
   });
