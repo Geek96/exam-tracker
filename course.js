@@ -739,9 +739,11 @@ document.getElementById('btnMineruGenTOC').addEventListener('click', async () =>
     const res = await fetch('/api/generate-toc', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: mineruContent, range }),
+      body: JSON.stringify({ content: mineruContent.slice(0, 40000), range }),
     });
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error(`服务器返回非JSON响应 (HTTP ${res.status})，内容可能超出大小限制`); }
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
     if (!data.chapters || !data.chapters.length) throw new Error('未能提取到任何章节');
 
