@@ -33,8 +33,8 @@ async function handler(req, res) {
   try { pdfBuf = Buffer.from(pdfBase64, 'base64'); }
   catch { res.status(400).json({ error: 'base64 解码失败' }); return; }
 
-  if (pdfBuf.length > 3.5 * 1024 * 1024) {
-    res.status(413).json({ error: `文件过大（${(pdfBuf.length / 1024 / 1024).toFixed(1)}MB），AI 提取仅支持 3.5MB 以内的文件` });
+  if (pdfBuf.length > 3.2 * 1024 * 1024) {
+    res.status(413).json({ error: `文件过大（${(pdfBuf.length / 1024 / 1024).toFixed(1)}MB），AI 提取仅支持 3.2MB 以内的文件` });
     return;
   }
 

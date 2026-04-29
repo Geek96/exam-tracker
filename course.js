@@ -635,10 +635,10 @@ document.getElementById('btnMineruExtract').addEventListener('click', startMiner
 async function startMineruFlow() {
   if (!currentPdfArrayBuffer) return;
 
-  const MAX_PDF_BYTES = 3.5 * 1024 * 1024;
+  const MAX_PDF_BYTES = 3.2 * 1024 * 1024;
   if (currentPdfArrayBuffer.byteLength > MAX_PDF_BYTES) {
     const mb = (currentPdfArrayBuffer.byteLength / 1024 / 1024).toFixed(1);
-    showError(`PDF 文件过大（${mb}MB），AI 提取仅支持 3.5MB 以内的文件，请使用手动粘贴目录方式。`);
+    showError(`PDF 文件过大（${mb}MB），AI 提取仅支持 3.2MB 以内的文件，请使用手动粘贴目录方式。`);
     return;
   }
 
@@ -657,7 +657,9 @@ async function startMineruFlow() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pdfBase64, filename: pdfFileName || 'upload.pdf' }),
     });
-    const data = await res.json();
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error(`上传失败 (HTTP ${res.status})，文件可能超出大小限制（最大 3.2MB）`); }
     if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
     mineruTaskId = data.taskId;
@@ -1473,12 +1475,18 @@ async function startMaterialMineruJob(file, fileType) {
     const pdfBase64 = arrayBufferToBase64(buf);
     mjUpdate(jobId, { step: 1, status: '正在上传…' });
 
+    if (buf.byteLength > 3.2 * 1024 * 1024) {
+      const mb = (buf.byteLength / 1024 / 1024).toFixed(1);
+      throw new Error(`文件过大（${mb}MB），MinerU 转换仅支持 3.2MB 以内的文件`);
+    }
     const res = await fetch('/api/mineru-submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ pdfBase64, filename: file.name, fileType: fileType || 'pdf' }),
     });
-    const d = await res.json();
+    let d;
+    try { d = await res.json(); }
+    catch { throw new Error(`上传失败 (HTTP ${res.status})，文件可能超出大小限制（最大 3.2MB）`); }
     if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
 
     const taskId = d.taskId;
