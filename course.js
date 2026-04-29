@@ -108,15 +108,41 @@ function renderProgress() {
 
 // ── Render Chapters ───────────────────────────────────────────────────────────
 function renderChapters() {
+  // Overview: show inline import card when empty
+  const importLandingInline = document.getElementById('importLandingInline');
+  if (importLandingInline) {
+    importLandingInline.style.display = course.chapters.length === 0 ? 'block' : 'none';
+  }
+
+  // Chapters panel state
   if (course.chapters.length === 0) {
     importLanding.style.display = 'flex';
     chaptersWrap.style.display = 'none';
-    return;
+  } else {
+    importLanding.style.display = 'none';
+    chaptersWrap.style.display = 'flex';
+    chaptersList.innerHTML = '';
+    course.chapters.forEach((ch, ci) => chaptersList.appendChild(buildChapterEl(ch, ci)));
   }
-  importLanding.style.display = 'none';
-  chaptersWrap.style.display = 'block';
-  chaptersList.innerHTML = '';
-  course.chapters.forEach((ch, ci) => chaptersList.appendChild(buildChapterEl(ch, ci)));
+
+  updateChapterNavCard();
+}
+
+function updateChapterNavCard() {
+  let totalLeaves = 0, doneLeaves = 0;
+  for (const ch of course.chapters) {
+    totalLeaves += countLeaves(ch);
+    doneLeaves += countDoneLeaves(ch);
+  }
+  const pct = totalLeaves ? Math.round((doneLeaves / totalLeaves) * 100) : 0;
+  const meta = document.getElementById('chapterNavMeta');
+  const fill = document.getElementById('chapterNavFill');
+  const pctEl = document.getElementById('chapterNavPct');
+  if (meta) meta.textContent = course.chapters.length > 0
+    ? `${course.chapters.length} 章 · ${totalLeaves} 个知识点`
+    : '暂无章节 — 点击导入';
+  if (fill) { fill.style.width = `${pct}%`; fill.style.background = course.color || 'var(--accent)'; }
+  if (pctEl) pctEl.textContent = `${pct}%`;
 }
 
 function buildChapterEl(ch, ci) {
@@ -282,15 +308,32 @@ document.getElementById('btnCollapseAll').addEventListener('click', () => {
 document.getElementById('btnAddMore').addEventListener('click', openPdfModal);
 document.getElementById('btnImportTop').addEventListener('click', openPdfModal);
 
+// ── Panel switching: overview ↔ chapters ─────────────────────────────────────
+document.getElementById('chapterNavCard').addEventListener('click', () => {
+  document.getElementById('panelOverview').style.display = 'none';
+  const pc = document.getElementById('panelChapters');
+  pc.style.display = 'flex';
+});
+
+document.getElementById('btnChaptersBack').addEventListener('click', () => {
+  document.getElementById('panelChapters').style.display = 'none';
+  document.getElementById('panelOverview').style.display = 'block';
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  PDF IMPORT MODAL
 // ══════════════════════════════════════════════════════════════════════════════
 
 let extractedOutline = null;  // raw from PDF.js or parsed text
 let pdfFileName = '';
+let currentPdfArrayBuffer = null;
+let mineruTaskId = null;
+let mineruPollTimer = null;
+let mineruContent = null;
 
 // ── Open / close ──────────────────────────────────────────────────────────────
-const pdfModal = document.getElementById('pdfModal');
+const pdfModal         = document.getElementById('pdfModal');
+const pdfMineruProcess = document.getElementById('pdfMineruProcess');
 
 function openPdfModal() {
   resetStep1();
@@ -319,6 +362,13 @@ const step1Footer = document.getElementById('step1Footer');
 function resetStep1() {
   extractedOutline = null;
   pdfFileName = '';
+  currentPdfArrayBuffer = null;
+  clearInterval(mineruPollTimer);
+  mineruTaskId = null;
+  mineruContent = null;
+  document.getElementById('mineruRangeSection').style.display = 'none';
+  document.getElementById('mineruRangeInput').value = '';
+  document.getElementById('btnMineruGenTOC').disabled = false;
   showSubstate('drop');
   step1Footer.style.display = 'none';
   document.getElementById('tocFileName').textContent = '';
@@ -327,10 +377,11 @@ function resetStep1() {
 }
 
 function showSubstate(state) {
-  pdfDrop.style.display      = state === 'drop'    ? 'flex' : 'none';
-  pdfLoading.style.display   = state === 'loading' ? 'flex' : 'none';
-  pdfError.style.display     = state === 'error'   ? 'flex' : 'none';
-  pdfNoOutline.style.display = state === 'noOutline'? 'flex' : 'none';
+  pdfDrop.style.display          = state === 'drop'      ? 'flex' : 'none';
+  pdfLoading.style.display       = state === 'loading'   ? 'flex' : 'none';
+  pdfError.style.display         = state === 'error'     ? 'flex' : 'none';
+  pdfNoOutline.style.display     = state === 'noOutline' ? 'flex' : 'none';
+  pdfMineruProcess.style.display = state === 'mineru'    ? 'flex' : 'none';
 }
 
 // Drag & drop on drop zone
@@ -380,6 +431,7 @@ async function handlePdfFile(file) {
 
   try {
     const buf = await file.arrayBuffer();
+    currentPdfArrayBuffer = buf;  // store for MinerU path
     const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     const outline = await pdf.getOutline();
 
@@ -408,6 +460,151 @@ document.getElementById('btnParseText').addEventListener('click', () => {
   if (!extractedOutline.length) { showToast('未能解析出章节，请检查格式'); return; }
   onOutlineReady();
 });
+
+// ── MinerU AI extraction flow ─────────────────────────────────────────────────
+document.getElementById('btnMineruExtract').addEventListener('click', startMineruFlow);
+
+async function startMineruFlow() {
+  if (!currentPdfArrayBuffer) return;
+
+  const MAX_PDF_BYTES = 3.5 * 1024 * 1024;
+  if (currentPdfArrayBuffer.byteLength > MAX_PDF_BYTES) {
+    const mb = (currentPdfArrayBuffer.byteLength / 1024 / 1024).toFixed(1);
+    showError(`PDF 文件过大（${mb}MB），AI 提取仅支持 3.5MB 以内的文件，请使用手动粘贴目录方式。`);
+    return;
+  }
+
+  showSubstate('mineru');
+  setMineruStep(1);
+  setMineruStatus('正在上传文件…');
+  document.getElementById('mineruRangeSection').style.display = 'none';
+
+  const pdfBase64 = arrayBufferToBase64(currentPdfArrayBuffer);
+
+  try {
+    const res = await fetch('/api/mineru-submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pdfBase64, filename: pdfFileName || 'upload.pdf' }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+
+    mineruTaskId = data.taskId;
+    setMineruStep(2);
+    setMineruStatus('MinerU 正在解析文档，请耐心等待（通常需要 30–120 秒）…');
+    clearInterval(mineruPollTimer);
+    mineruPollTimer = setInterval(pollMineruResult, 6000);
+  } catch (err) {
+    setMineruStatus('❌ 上传失败：' + err.message);
+  }
+}
+
+async function pollMineruResult() {
+  if (!mineruTaskId) return;
+  try {
+    const res = await fetch(`/api/mineru-result?taskId=${encodeURIComponent(mineruTaskId)}`);
+    const data = await res.json();
+
+    if (data.status === 'done') {
+      clearInterval(mineruPollTimer);
+      mineruContent = data.content;
+      if (!mineruContent) {
+        setMineruStatus('❌ MinerU 返回内容为空，请尝试其他 PDF');
+        return;
+      }
+      setMineruStep(3);
+      setMineruStatus('✅ 解析完成！请输入章节范围描述，然后点击「生成目录结构」：');
+      document.getElementById('mineruRangeSection').style.display = 'flex';
+    } else if (data.status === 'failed') {
+      clearInterval(mineruPollTimer);
+      setMineruStatus('❌ 解析失败：' + (data.error || '未知错误'));
+    }
+    // pending → keep polling
+  } catch {
+    // Network hiccup — will retry next interval
+  }
+}
+
+function setMineruStep(n) {
+  for (let i = 1; i <= 3; i++) {
+    const el = document.getElementById('mStep' + i);
+    if (!el) continue;
+    el.classList.toggle('active', i === n);
+    el.classList.toggle('done', i < n);
+  }
+}
+
+function setMineruStatus(text) {
+  const el = document.getElementById('mineruStatusText');
+  if (el) el.textContent = text;
+}
+
+document.getElementById('btnMineruGenTOC').addEventListener('click', async () => {
+  if (!mineruContent) return;
+  const range = document.getElementById('mineruRangeInput').value.trim();
+
+  setMineruStatus('AI 正在生成目录结构，请稍候…');
+  document.getElementById('btnMineruGenTOC').disabled = true;
+
+  try {
+    const res = await fetch('/api/generate-toc', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: mineruContent, range }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
+    if (!data.chapters || !data.chapters.length) throw new Error('未能提取到任何章节');
+
+    // Map Gemini output → normalizeOutline format
+    extractedOutline = data.chapters.map(ch => ({
+      title: ch.title || '',
+      num: extractNum(ch.title || ''),
+      sections: (ch.sections || []).map(sec => ({
+        title: sec.title || '',
+        num: extractNum(sec.title || ''),
+        subsections: (sec.subsections || []).map(sub => ({
+          title: sub.title || '',
+          num: extractNum(sub.title || ''),
+        })),
+      })),
+    }));
+
+    // Auto-save MinerU markdown as a course file
+    if (mineruContent) {
+      const mdName = (pdfFileName || 'document').replace(/\.pdf$/i, '') + '_MinerU.md';
+      await saveMdAsMaterial(mineruContent, mdName);
+    }
+
+    // Proceed to step 2 — keep MinerU UI hidden
+    showSubstate('drop');
+    onOutlineReady();
+  } catch (err) {
+    setMineruStatus('❌ 目录生成失败：' + err.message);
+    document.getElementById('btnMineruGenTOC').disabled = false;
+  }
+});
+
+document.getElementById('btnMineruBack').addEventListener('click', () => {
+  clearInterval(mineruPollTimer);
+  mineruTaskId = null;
+  mineruContent = null;
+  document.getElementById('mineruRangeSection').style.display = 'none';
+  document.getElementById('btnMineruGenTOC').disabled = false;
+  showSubstate('noOutline');
+});
+
+function arrayBufferToBase64(buf) {
+  const bytes = new Uint8Array(buf);
+  let str = '';
+  // Process in chunks to avoid call-stack overflow on large files
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    str += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(str);
+}
 
 function onOutlineReady() {
   document.getElementById('tocFileName').textContent = pdfFileName || '手动输入';
@@ -972,6 +1169,7 @@ function fileIcon(type, name) {
   if (n.endsWith('.pptx') || n.endsWith('.ppt')) return '📊';
   if (n.endsWith('.docx') || n.endsWith('.doc')) return '📝';
   if (n.endsWith('.txt')) return '📃';
+  if (n.endsWith('.md') || type === 'text/markdown') return '📋';
   return '📎';
 }
 function fmtSize(b) {
@@ -990,12 +1188,14 @@ async function renderMaterials() {
   if (files.length === 0) {
     empty.style.display = 'flex';
     grid.style.display = 'none';
+    refreshContextBadge();
     return;
   }
   empty.style.display = 'none';
   grid.style.display = 'grid';
 
   files.forEach(f => {
+    const isText = f.type === 'text/plain' || (f.name || '').endsWith('.md') || (f.name || '').endsWith('.txt');
     const card = document.createElement('div');
     card.className = 'material-card';
     card.innerHTML = `
@@ -1004,24 +1204,32 @@ async function renderMaterials() {
       <div class="material-card-meta">${fmtSize(f.size)} · ${new Date(f.addedAt).toLocaleDateString('zh-CN')}</div>
       <div class="material-card-actions">
         <button class="btn-mat-open">查看</button>
+        <button class="btn-mat-rename">✎</button>
         <button class="btn-mat-del">删除</button>
       </div>`;
     card.querySelector('.btn-mat-open').addEventListener('click', e => {
       e.stopPropagation();
-      if (f.type === 'text/plain') { openTextEditModal(f); return; }
+      if (isText) { openTextEditModal(f); return; }
       const blob = new Blob([f.data], { type: f.type });
       const url  = URL.createObjectURL(blob);
       window.open(url, '_blank');
       setTimeout(() => URL.revokeObjectURL(url), 15000);
     });
+    card.querySelector('.btn-mat-rename').addEventListener('click', e => {
+      e.stopPropagation();
+      if (isText) { openTextEditModal(f); return; }
+      openRenameModal(f);
+    });
     card.querySelector('.btn-mat-del').addEventListener('click', async e => {
       e.stopPropagation();
       await dbDelete(f.id);
-      renderMaterials();
+      await renderMaterials();
       showToast('已删除');
     });
     grid.appendChild(card);
   });
+
+  refreshContextBadge();
 }
 
 async function uploadMaterialFiles(fileList) {
@@ -1059,82 +1267,142 @@ matDropZone.addEventListener('drop', async e => {
   if (files.length) await uploadMaterialFiles(files);
 });
 
-// Initialise
-renderMaterials();
-
 // ══════════════════════════════════════════════════════════════════════════════
-//  AI Study Plan
+//  AI Study Chat (inline right panel)
 // ══════════════════════════════════════════════════════════════════════════════
-const aiModal        = document.getElementById('aiModal');
-const aiSetupPanel   = document.getElementById('aiSetupPanel');
-const aiChatPanel    = document.getElementById('aiChatPanel');
 const aiChatMessages = document.getElementById('aiChatMessages');
 const aiChatInput    = document.getElementById('aiChatInput');
 const aiDaysLeft     = document.getElementById('aiDaysLeft');
 const aiHoursPerDay  = document.getElementById('aiHoursPerDay');
 const aiReviewGuide  = document.getElementById('aiReviewGuide');
-let aiAbortCtrl      = null;
-let aiGuideContent   = '';
-let aiProvider       = 'gemini';
-let aiConversation   = [];   // [{role:'user'|'assistant', content:string}]
-let aiStreaming       = false;
+let aiAbortCtrl  = null;
+let aiGuideContent = '';
+let aiProvider   = 'gemini';
+let aiConversation = [];
+let aiStreaming   = false;
 
-document.querySelectorAll('.ai-provider-btn').forEach(btn => {
+// Pre-fill days from exam date
+(function() {
+  const d = daysUntil(course.examDate);
+  if (d !== null && d > 0) aiDaysLeft.value = d;
+})();
+
+// Model toggle
+document.querySelectorAll('.ai-model-btn').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.ai-provider-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.ai-model-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     aiProvider = btn.dataset.provider;
   });
 });
 
-function openAIModal() {
-  const d = daysUntil(course.examDate);
-  if (d !== null && d > 0) aiDaysLeft.value = d;
-  showAISetup();
-  aiModal.classList.add('open');
-}
-function closeAIModal() {
-  if (aiAbortCtrl) { aiAbortCtrl.abort(); aiAbortCtrl = null; }
-  aiModal.classList.remove('open');
-}
-function showAISetup() {
-  aiSetupPanel.style.display = 'flex';
-  aiChatPanel.style.display  = 'none';
-}
-function showAIChat() {
-  aiSetupPanel.style.display = 'none';
-  aiChatPanel.style.display  = 'flex';
-}
+// Settings panel toggle
+document.getElementById('aiSettingsToggle').addEventListener('click', () => {
+  const p = document.getElementById('aiSettingsPanel');
+  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+});
 
-document.getElementById('btnAIPlan').addEventListener('click', openAIModal);
-document.getElementById('aiModalClose').addEventListener('click', closeAIModal);
-document.getElementById('aiCancelBtn').addEventListener('click', closeAIModal);
-document.getElementById('aiChatClose').addEventListener('click', closeAIModal);
+// Restart conversation
 document.getElementById('aiBtnRestart').addEventListener('click', () => {
   if (aiAbortCtrl) { aiAbortCtrl.abort(); aiAbortCtrl = null; }
   aiConversation = [];
-  aiChatMessages.innerHTML = '';
   aiStreaming = false;
-  showAISetup();
+  aiChatMessages.innerHTML = '';
+  aiChatMessages.appendChild(buildWelcomeState());
 });
-aiModal.addEventListener('click', e => { if (e.target === aiModal) closeAIModal(); });
+
+// Attach button toggles guide panel
+document.getElementById('aiAttachBtn').addEventListener('click', () => {
+  const g = document.getElementById('aiGuidePanel');
+  g.style.display = g.style.display === 'none' ? 'flex' : 'none';
+});
+
+// ── Context badge: show how many .md files are in course materials ────────────
+async function refreshContextBadge() {
+  try {
+    const all = await dbGetAll();
+    const mds = all.filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'));
+    const badge = document.getElementById('aiContextBadge');
+    const countEl = document.getElementById('aiContextCount');
+    if (badge && countEl) {
+      badge.style.display = mds.length > 0 ? 'flex' : 'none';
+      countEl.textContent = `${mds.length} 个文件`;
+    }
+  } catch {}
+}
+
+// Load markdown file contents to include as AI context
+async function loadMarkdownContext() {
+  try {
+    const all = await dbGetAll();
+    const mds = all.filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'));
+    if (!mds.length) return '';
+    return mds.map(f => {
+      const text = new TextDecoder().decode(f.data);
+      return `--- 文件：${f.name} ---\n${text.slice(0, 15000)}`;
+    }).join('\n\n');
+  } catch { return ''; }
+}
+
+// ── Welcome state builder ─────────────────────────────────────────────────────
+function buildWelcomeState() {
+  const w = document.createElement('div');
+  w.className = 'ai-welcome-state';
+  w.id = 'aiWelcomeState';
+  w.innerHTML = `
+    <div class="ai-welcome-glyph">✦</div>
+    <h3 class="ai-welcome-title">AI 学习助手</h3>
+    <p class="ai-welcome-sub">我可以帮你制定复习计划、解答课程疑问、分析重点内容。</p>
+    <div class="ai-quick-actions" id="aiQuickActions">
+      <button class="ai-quick-btn" data-prompt-type="plan">📋 生成复习计划</button>
+      <button class="ai-quick-btn" data-prompt-type="summary">📖 总结课程重点</button>
+      <button class="ai-quick-btn" data-prompt-type="quiz">❓ 出题测验</button>
+    </div>`;
+  w.querySelectorAll('.ai-quick-btn').forEach(btn => {
+    btn.addEventListener('click', () => handleQuickAction(btn.dataset.promptType));
+  });
+  return w;
+}
+
+async function handleQuickAction(type) {
+  const daysLeft    = parseFloat(aiDaysLeft.value)    || 7;
+  const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
+  const mdCtx = await loadMarkdownContext();
+
+  let userContent, displayLabel;
+  if (type === 'plan') {
+    const guide = getActiveGuide();
+    userContent = buildContextMsg(daysLeft, hoursPerDay, guide, mdCtx);
+    displayLabel = `📋 生成复习计划 · ${daysLeft} 天 · 每天 ${hoursPerDay} 小时`;
+  } else if (type === 'summary') {
+    userContent = `请帮我总结课程「${escHtml(course.name)}」的核心知识点和重点内容。${mdCtx ? '\n\n课程资料：\n' + mdCtx : ''}`;
+    displayLabel = '📖 总结课程重点';
+  } else {
+    userContent = `请根据课程「${escHtml(course.name)}」的内容为我出几道测验题，并给出答案。${mdCtx ? '\n\n课程资料：\n' + mdCtx : ''}`;
+    displayLabel = '❓ 出题测验';
+  }
+  await sendAIMsg(userContent, displayLabel);
+}
 
 // ── AI Guide Tabs ─────────────────────────────────────────────────────────────
 function getActiveTab() {
-  const active = document.querySelector('.ai-tab.active');
+  const active = document.querySelector('#aiGuidePanel .ai-tab.active');
   return active ? active.dataset.tab : 'text';
 }
 
-document.querySelectorAll('.ai-tab').forEach(btn => {
+function getActiveGuide() {
+  const tab = getActiveTab();
+  return tab === 'text' ? (aiReviewGuide ? aiReviewGuide.value.trim() : '') : aiGuideContent;
+}
+
+document.querySelectorAll('#aiTabs .ai-tab').forEach(btn => {
   btn.addEventListener('click', () => {
-    document.querySelectorAll('.ai-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#aiTabs .ai-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     const tab = btn.dataset.tab;
     document.getElementById('aiPaneText').style.display = tab === 'text' ? 'flex' : 'none';
     document.getElementById('aiPanePdf').style.display  = tab === 'pdf'  ? 'flex' : 'none';
     document.getElementById('aiPaneUrl').style.display  = tab === 'url'  ? 'flex' : 'none';
-    if (tab !== 'pdf') { /* keep aiGuideContent from pdf until user explicitly clears */ }
-    if (tab !== 'url') { /* keep aiGuideContent from url until user explicitly clears */ }
     if (tab === 'text') aiGuideContent = '';
   });
 });
@@ -1217,7 +1485,7 @@ document.getElementById('aiFetchUrlBtn').addEventListener('click', async () => {
 document.getElementById('aiUrlClear').addEventListener('click', resetUrlPane);
 
 // ── Build first-turn context message ─────────────────────────────────────────
-function buildContextMsg(daysLeft, hoursPerDay, reviewGuide) {
+function buildContextMsg(daysLeft, hoursPerDay, reviewGuide, mdContext) {
   const chapterText = course.chapters.map(ch => {
     const total = countLeaves(ch), done = countDoneLeaves(ch);
     const secLines = ch.sections.map(sec => {
@@ -1229,34 +1497,40 @@ function buildContextMsg(daysLeft, hoursPerDay, reviewGuide) {
     return `【${ch.title}】(${done}/${total} 已完成)\n${secLines}`;
   }).join('\n\n');
 
-  return `距考试还有 ${daysLeft} 天，每天可用 ${hoursPerDay} 小时（共约 ${daysLeft * hoursPerDay} 小时）。
+  let msg = `距考试还有 ${daysLeft} 天，每天可用 ${hoursPerDay} 小时（共约 ${daysLeft * hoursPerDay} 小时）。
 
 课程章节及复习进度：
 ${chapterText || '（暂无章节）'}
 
 复习指导：
-${reviewGuide || '（未提供）'}
+${reviewGuide || '（未提供）'}`;
 
-请根据以上信息，生成一份按天分配的详细复习计划。`;
+  if (mdContext) msg += `\n\n课程资料（Markdown）：\n${mdContext}`;
+
+  msg += '\n\n请根据以上信息，生成一份按天分配的详细复习计划。';
+  return msg;
 }
 
 // ── Core: send one message and stream the response ────────────────────────────
 async function sendAIMsg(userContent, displayLabel) {
   if (aiStreaming) return;
   aiStreaming = true;
+
+  // Hide welcome state on first message
+  const welcome = document.getElementById('aiWelcomeState');
+  if (welcome) welcome.style.display = 'none';
+
   aiChatInput.disabled = true;
   document.getElementById('aiChatSend').disabled = true;
 
   aiConversation.push({ role: 'user', content: userContent });
 
-  // User bubble
   const userEl = document.createElement('div');
   userEl.className = 'chat-msg chat-msg-user';
   userEl.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(displayLabel || userContent)}</div>`;
   aiChatMessages.appendChild(userEl);
   aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
 
-  // AI bubble (streaming placeholder)
   const aiMsgEl = document.createElement('div');
   aiMsgEl.className = 'chat-msg chat-msg-assistant';
   const bubble = document.createElement('div');
@@ -1320,7 +1594,6 @@ async function sendAIMsg(userContent, displayLabel) {
     bubble.innerHTML = mdToHtml(fullText);
     aiConversation.push({ role: 'assistant', content: fullText });
 
-    // Save-to-materials button
     const saveBtn = document.createElement('button');
     saveBtn.className = 'btn-save-msg';
     saveBtn.textContent = '💾 保存为资料';
@@ -1340,33 +1613,32 @@ async function sendAIMsg(userContent, displayLabel) {
   }
 }
 
-// ── First generation ──────────────────────────────────────────────────────────
-document.getElementById('aiBtnGenerate').addEventListener('click', async () => {
-  const daysLeft    = parseFloat(aiDaysLeft.value)    || 7;
-  const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
-  const tab         = getActiveTab();
-  const reviewGuide = tab === 'text' ? aiReviewGuide.value.trim() : aiGuideContent;
-
-  aiConversation   = [];
-  aiChatMessages.innerHTML = '';
-  showAIChat();
-
-  const contextMsg   = buildContextMsg(daysLeft, hoursPerDay, reviewGuide);
-  const displayLabel = `📋 生成复习计划 · ${daysLeft} 天 · 每天 ${hoursPerDay} 小时${reviewGuide ? ' · 含复习指导' : ''}`;
-  await sendAIMsg(contextMsg, displayLabel);
-});
-
 // ── Follow-up chat ────────────────────────────────────────────────────────────
 async function doSend() {
   const text = aiChatInput.value.trim();
   if (!text || aiStreaming) return;
   aiChatInput.value = '';
-  await sendAIMsg(text);
+  autoResizeInput();
+
+  // For free-form messages, include md context in first turn
+  let content = text;
+  if (aiConversation.length === 0) {
+    const mdCtx = await loadMarkdownContext();
+    if (mdCtx) content = text + '\n\n[课程资料]\n' + mdCtx;
+  }
+  await sendAIMsg(content, text);
 }
 document.getElementById('aiChatSend').addEventListener('click', doSend);
 aiChatInput.addEventListener('keydown', e => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
 });
+
+// Auto-resize textarea
+function autoResizeInput() {
+  aiChatInput.style.height = 'auto';
+  aiChatInput.style.height = Math.min(aiChatInput.scrollHeight, 120) + 'px';
+}
+aiChatInput.addEventListener('input', autoResizeInput);
 
 // ── Save AI message to materials ──────────────────────────────────────────────
 async function saveMsgAsMaterial(content) {
@@ -1385,10 +1657,14 @@ async function saveMsgAsMaterial(content) {
 
 // ── Text edit modal ───────────────────────────────────────────────────────────
 let textEditFileId = null;
+let textEditOrigFile = null;
 
 function openTextEditModal(f) {
   textEditFileId = f.id;
+  textEditOrigFile = f;
   document.getElementById('textEditTitle').textContent = f.name;
+  document.getElementById('textEditRenameInput').style.display = 'none';
+  document.getElementById('textEditRenameInput').value = f.name;
   const text = new TextDecoder().decode(f.data);
   document.getElementById('textEditArea').value = text;
   document.getElementById('textEditModal').classList.add('open');
@@ -1396,12 +1672,19 @@ function openTextEditModal(f) {
 function closeTextEditModal() {
   document.getElementById('textEditModal').classList.remove('open');
   textEditFileId = null;
+  textEditOrigFile = null;
 }
 
 document.getElementById('textEditClose').addEventListener('click', closeTextEditModal);
 document.getElementById('textEditCancel').addEventListener('click', closeTextEditModal);
 document.getElementById('textEditModal').addEventListener('click', e => {
   if (e.target === document.getElementById('textEditModal')) closeTextEditModal();
+});
+
+document.getElementById('textEditRenameBtn').addEventListener('click', () => {
+  const inp = document.getElementById('textEditRenameInput');
+  inp.style.display = inp.style.display === 'none' ? 'block' : 'none';
+  if (inp.style.display === 'block') inp.focus();
 });
 
 document.getElementById('textEditSave').addEventListener('click', async () => {
@@ -1411,11 +1694,65 @@ document.getElementById('textEditSave').addEventListener('click', async () => {
   const all  = await dbGetAll();
   const orig = all.find(f => f.id === textEditFileId);
   if (!orig) return;
-  await dbSave({ ...orig, data, size: data.byteLength });
+
+  // Apply rename if input is visible and non-empty
+  const renameInp = document.getElementById('textEditRenameInput');
+  const newName = renameInp.style.display !== 'none' ? renameInp.value.trim() : '';
+  const finalName = newName || orig.name;
+
+  await dbSave({ ...orig, name: finalName, data, size: data.byteLength });
   closeTextEditModal();
   await renderMaterials();
   showToast('已保存 ✓');
 });
+
+// ── Rename modal (for non-text files) ────────────────────────────────────────
+let renameFileId = null;
+
+function openRenameModal(f) {
+  renameFileId = f.id;
+  document.getElementById('renameInput').value = f.name;
+  document.getElementById('renameModal').classList.add('open');
+  document.getElementById('renameInput').focus();
+}
+function closeRenameModal() {
+  document.getElementById('renameModal').classList.remove('open');
+  renameFileId = null;
+}
+
+document.getElementById('renameClose').addEventListener('click', closeRenameModal);
+document.getElementById('renameCancel').addEventListener('click', closeRenameModal);
+document.getElementById('renameModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('renameModal')) closeRenameModal();
+});
+document.getElementById('renameConfirm').addEventListener('click', async () => {
+  if (!renameFileId) return;
+  const newName = document.getElementById('renameInput').value.trim();
+  if (!newName) return;
+  const all  = await dbGetAll();
+  const orig = all.find(f => f.id === renameFileId);
+  if (!orig) return;
+  await dbSave({ ...orig, name: newName });
+  closeRenameModal();
+  await renderMaterials();
+  showToast('已重命名 ✓');
+});
+document.getElementById('renameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('renameConfirm').click();
+});
+
+// ── Save MinerU markdown as material ─────────────────────────────────────────
+async function saveMdAsMaterial(mdContent, filename) {
+  const name = filename || `MinerU_${Date.now()}.md`;
+  const data = new TextEncoder().encode(mdContent).buffer;
+  await dbSave({
+    id: `mat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
+    courseId, name, type: 'text/markdown',
+    size: data.byteLength, data, addedAt: new Date().toISOString(),
+  });
+  await renderMaterials();
+  showToast(`已保存 Markdown 资料：${name} ✓`);
+}
 
 function mdToHtml(md) {
   const lines = md.split('\n');
@@ -1448,7 +1785,38 @@ function mdToHtml(md) {
   return out.join('');
 }
 
+// ── Layout height vars ────────────────────────────────────────────────────────
+function updateLayoutHeightVars() {
+  const topbar = document.querySelector('.topbar');
+  const hero   = document.getElementById('courseHero');
+  const th = topbar ? topbar.getBoundingClientRect().height : 48;
+  const hh = hero   ? hero.getBoundingClientRect().height   : 110;
+  document.documentElement.style.setProperty('--topbar-h', th + 'px');
+  document.documentElement.style.setProperty('--hero-h',   hh + 'px');
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderHeader();
 renderChapters();
 renderProgress();
+renderMaterials();
+
+// Set accurate layout heights after first render
+requestAnimationFrame(() => {
+  updateLayoutHeightVars();
+  // Re-measure after fonts settle
+  setTimeout(updateLayoutHeightVars, 200);
+});
+
+if (typeof ResizeObserver !== 'undefined') {
+  const ro = new ResizeObserver(updateLayoutHeightVars);
+  const topbar = document.querySelector('.topbar');
+  const hero   = document.getElementById('courseHero');
+  if (topbar) ro.observe(topbar);
+  if (hero)   ro.observe(hero);
+}
+
+// Bind quick-action buttons in the static welcome state
+document.querySelectorAll('#aiWelcomeState .ai-quick-btn').forEach(btn => {
+  btn.addEventListener('click', () => handleQuickAction(btn.dataset.promptType));
+});

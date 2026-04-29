@@ -18,7 +18,6 @@
     </div>
     <div class="topbar-right">
       <button class="btn-edit-top" id="btnEditCourse">✎ 编辑信息</button>
-      <button class="btn-ai-top" id="btnAIPlan">✨ AI 规划</button>
       <button class="btn-import-top" id="btnImportTop">+ 导入章节</button>
     </div>
   </header>
@@ -40,65 +39,212 @@
     </div>
   </div>
 
-  <!-- ── Main ── -->
-  <main class="course-main">
+  <!-- ══════════════════════════════════════════
+       Main 2-column layout
+  ══════════════════════════════════════════ -->
+  <main class="course-layout">
 
-    <!-- Empty / Import Panel -->
-    <div class="import-landing" id="importLanding">
-      <div class="import-card" id="dropZoneCard">
-        <div class="import-icon">📄</div>
-        <h3>从 PDF 导入章节目录</h3>
-        <p>将课本 PDF 拖拽到此处，或点击选择文件<br>系统将自动提取书签目录并让你选择章节范围</p>
-        <div class="import-btns">
-          <label class="btn-pdf-pick" for="pdfFileInput">选择 PDF 文件</label>
-          <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" />
-          <button class="btn-manual-add" id="btnManualAdd">手动添加章节</button>
+    <!-- ─────────── LEFT PANEL (38%) ─────────── -->
+    <div class="panel-left" id="panelLeft">
+
+      <!-- ── State A: Overview ── -->
+      <div id="panelOverview">
+
+        <!-- Chapter navigation card -->
+        <div class="chapter-nav-card holo-card-border" id="chapterNavCard">
+          <div class="chapter-nav-surface holo-card-surface">
+            <div class="chapter-nav-icon">📚</div>
+            <div class="chapter-nav-info">
+              <div class="chapter-nav-title">章节目录</div>
+              <div class="chapter-nav-meta" id="chapterNavMeta">暂无章节 — 点击导入</div>
+            </div>
+            <div class="chapter-nav-right">
+              <div class="chapter-nav-progress">
+                <div class="mini-bar"><div class="mini-fill" id="chapterNavFill" style="width:0%"></div></div>
+                <span class="mini-pct" id="chapterNavPct">0%</span>
+              </div>
+              <span class="chapter-nav-arrow">›</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Empty import card (shown when no chapters) -->
+        <div class="import-landing-inline" id="importLandingInline" style="display:none">
+          <div class="import-card-inline" id="dropZoneCard">
+            <div class="import-icon">📄</div>
+            <h3>从 PDF 导入章节目录</h3>
+            <p>将课本 PDF 拖拽到此处，或点击选择文件</p>
+            <div class="import-btns">
+              <label class="btn-pdf-pick" for="pdfFileInput">选择 PDF 文件</label>
+              <input type="file" id="pdfFileInput" accept=".pdf" style="display:none" />
+              <button class="btn-manual-add" id="btnManualAdd">手动添加章节</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Materials section -->
+        <div class="materials-section-inline">
+          <div class="materials-toolbar-inline">
+            <h3 class="materials-title-sm">课程资料</h3>
+            <label class="btn-sm accent materials-upload-btn" for="materialFileInput">+ 上传</label>
+            <input type="file" id="materialFileInput" multiple
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp" style="display:none" />
+          </div>
+          <div class="materials-drop-zone materials-drop-inline" id="materialsDropZone">
+            <div class="materials-grid-inline" id="materialsGrid"></div>
+            <div class="materials-empty-inline" id="materialsEmpty">
+              <div class="materials-empty-icon">📂</div>
+              <p>拖拽文件到此处或点击上传</p>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Chapters List (populated after import) -->
-    <div class="chapters-wrap" id="chaptersWrap" style="display:none">
-      <div class="chapters-toolbar">
-        <h2 class="chapters-title">章节目录</h2>
-        <div class="chapters-toolbar-right">
-          <button class="btn-sm" id="btnExpandAll">全部展开</button>
-          <button class="btn-sm" id="btnCollapseAll">全部折叠</button>
-          <button class="btn-sm" id="btnResetChapters">重新开始</button>
+      <!-- ── State B: Chapters list ── -->
+      <div id="panelChapters" style="display:none; height:100%; flex-direction:column;">
+
+        <div class="chapters-panel-header">
+          <button class="chapters-back-btn" id="btnChaptersBack">← 返回</button>
+          <h3 class="chapters-panel-title">章节目录</h3>
           <button class="btn-sm accent" id="btnAddMore">+ 导入更多</button>
         </div>
-      </div>
-      <div id="chaptersList"></div>
-    </div>
 
-    <!-- Materials Section -->
-    <div class="materials-section">
-      <div class="materials-toolbar">
-        <h2 class="materials-title">课程资料</h2>
-        <div class="materials-toolbar-right">
-          <label class="btn-sm accent materials-upload-btn" for="materialFileInput">+ 上传文件</label>
-          <input type="file" id="materialFileInput" multiple
-            accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.webp" style="display:none" />
+        <!-- Empty state -->
+        <div class="import-landing import-landing-panel" id="importLanding" style="display:none">
+          <div class="import-card-sm">
+            <p>暂无章节 — 点击上方「导入更多」</p>
+          </div>
+        </div>
+
+        <!-- Chapters content -->
+        <div class="chapters-wrap-panel" id="chaptersWrap" style="display:none">
+          <div class="chapters-toolbar chapters-toolbar-panel">
+            <span class="chapters-title chapters-title-sm">章节目录</span>
+            <div class="chapters-toolbar-right">
+              <button class="btn-sm" id="btnExpandAll">展开</button>
+              <button class="btn-sm" id="btnCollapseAll">折叠</button>
+              <button class="btn-sm" id="btnResetChapters">重置</button>
+            </div>
+          </div>
+          <div id="chaptersList" class="chapters-list-scrollable"></div>
         </div>
       </div>
-      <div class="materials-drop-zone" id="materialsDropZone">
-        <div class="materials-grid" id="materialsGrid"></div>
-        <div class="materials-empty" id="materialsEmpty">
-          <div class="materials-empty-icon">📂</div>
-          <p>暂无资料 — 拖拽文件到此处或点击「上传文件」</p>
-        </div>
-      </div>
-    </div>
 
-  </main>
+    </div><!-- /panel-left -->
+
+    <!-- ─────────── RIGHT PANEL (62%) — AI Client ─────────── -->
+    <div class="panel-right">
+      <div class="ai-client-wrap">
+
+        <!-- AI Client Header -->
+        <div class="ai-client-header">
+          <div class="ai-client-brand">
+            <span class="ai-brand-dot"></span>
+            <span class="ai-brand-name">AI 学习助手</span>
+          </div>
+          <div class="ai-client-controls">
+            <div class="ai-context-badge" id="aiContextBadge" style="display:none" title="可读取的 Markdown 课程资料">
+              <span>📎</span><span id="aiContextCount">0 个文件</span>
+            </div>
+            <div class="ai-model-toggle" id="aiProviderBtns">
+              <button class="ai-model-btn active" data-provider="gemini">Gemini</button>
+              <button class="ai-model-btn" data-provider="claude">Claude</button>
+            </div>
+            <button class="ai-settings-toggle" id="aiSettingsToggle" title="复习设置">⚙</button>
+            <button class="btn-sm ai-restart-btn" id="aiBtnRestart" title="清空对话">↺</button>
+          </div>
+        </div>
+
+        <!-- Settings panel (collapsible) -->
+        <div class="ai-settings-panel" id="aiSettingsPanel" style="display:none">
+          <div class="ai-settings-row">
+            <div class="ai-field">
+              <label class="ai-label">距考试天数</label>
+              <input class="ai-input-sm" type="number" id="aiDaysLeft" min="1" max="365" value="7" />
+            </div>
+            <div class="ai-field">
+              <label class="ai-label">每天学习（小时）</label>
+              <input class="ai-input-sm" type="number" id="aiHoursPerDay" min="0.5" max="24" step="0.5" value="3" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Messages area -->
+        <div class="ai-client-messages" id="aiChatMessages">
+          <!-- Welcome state (hidden once chat starts) -->
+          <div class="ai-welcome-state" id="aiWelcomeState">
+            <div class="ai-welcome-glyph">✦</div>
+            <h3 class="ai-welcome-title">AI 学习助手</h3>
+            <p class="ai-welcome-sub">我可以帮你制定复习计划、解答课程疑问、分析重点内容。</p>
+            <div class="ai-quick-actions" id="aiQuickActions">
+              <button class="ai-quick-btn" data-prompt-type="plan">📋 生成复习计划</button>
+              <button class="ai-quick-btn" data-prompt-type="summary">📖 总结课程重点</button>
+              <button class="ai-quick-btn" data-prompt-type="quiz">❓ 出题测验</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guide attachment panel (toggleable) -->
+        <div class="ai-guide-panel" id="aiGuidePanel" style="display:none">
+          <div class="ai-tabs" id="aiTabs">
+            <button class="ai-tab active" data-tab="text">文字</button>
+            <button class="ai-tab" data-tab="pdf">PDF</button>
+            <button class="ai-tab" data-tab="url">链接</button>
+          </div>
+          <div class="ai-pane" id="aiPaneText">
+            <textarea class="ai-textarea ai-guide-textarea" id="aiReviewGuide"
+              placeholder="粘贴老师发的复习提纲、考试重点、题型说明…"></textarea>
+          </div>
+          <div class="ai-pane" id="aiPanePdf" style="display:none">
+            <div class="ai-upload-zone" id="aiPdfZone">
+              <div class="ai-upload-icon">📄</div>
+              <p>上传小型 PDF，AI 将自动提取文字内容</p>
+              <label class="btn-pdf-pick" for="aiPdfFile">选择 PDF 文件</label>
+              <input type="file" id="aiPdfFile" accept=".pdf" style="display:none" />
+            </div>
+            <div class="ai-loaded-file" id="aiPdfLoaded" style="display:none">
+              <span class="ai-loaded-icon">✅</span>
+              <span id="aiPdfName" class="ai-loaded-name"></span>
+              <span id="aiPdfChars" class="ai-loaded-meta"></span>
+              <button id="aiPdfClear" class="ai-loaded-clear">✕ 重新选择</button>
+            </div>
+          </div>
+          <div class="ai-pane" id="aiPaneUrl" style="display:none">
+            <div class="ai-url-row">
+              <input class="ai-url-input" type="url" id="aiUrlInput" placeholder="https://…" />
+              <button class="btn-sm" id="aiFetchUrlBtn">获取内容</button>
+            </div>
+            <div class="ai-url-status" id="aiUrlStatus"></div>
+            <div class="ai-loaded-file" id="aiUrlLoaded" style="display:none">
+              <span class="ai-loaded-icon">✅</span>
+              <span id="aiUrlChars" class="ai-loaded-meta"></span>
+              <button id="aiUrlClear" class="ai-loaded-clear">✕ 清除</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Input footer -->
+        <div class="ai-client-footer">
+          <div class="ai-input-row">
+            <button class="ai-attach-btn" id="aiAttachBtn" title="附加复习资料">📎</button>
+            <textarea class="ai-client-input" id="aiChatInput"
+              placeholder="向 AI 助手提问…（Enter 发送，Shift+Enter 换行）" rows="1"></textarea>
+            <button class="ai-send-btn" id="aiChatSend">↑</button>
+          </div>
+          <div class="ai-input-hint">AI 可自动读取课程 Markdown 资料 · Enter 发送</div>
+        </div>
+
+      </div>
+    </div><!-- /panel-right -->
+
+  </main><!-- /course-layout -->
 
   <!-- ══════════════════════════════════════════
-       PDF Import Modal  (2-step)
+       PDF Import Modal  (2-step, unchanged)
   ══════════════════════════════════════════ -->
   <div class="modal-overlay" id="pdfModal">
     <div class="modal modal-wide" id="pdfModalBox">
 
-      <!-- ── Step 1: Upload ── -->
       <div class="modal-step" id="step1" style="display:flex">
         <div class="modal-header">
           <h3 class="modal-title">导入 PDF 目录</h3>
@@ -106,36 +252,61 @@
         </div>
         <div class="modal-body">
 
-          <!-- Drop zone -->
           <div class="pdf-drop" id="pdfDrop">
-            <div class="pdf-drop-icon" id="pdfDropIcon">📂</div>
-            <p class="pdf-drop-main" id="pdfDropMain">拖拽 PDF 到此处</p>
+            <div class="pdf-drop-icon">📂</div>
+            <p class="pdf-drop-main">拖拽 PDF 到此处</p>
             <p class="pdf-drop-sub">或</p>
             <label class="btn-pdf-browse" for="pdfFileModal">选择文件</label>
             <input type="file" id="pdfFileModal" accept=".pdf" style="display:none" />
-            <p class="pdf-drop-note" id="pdfDropNote">仅支持含书签目录的 PDF</p>
+            <p class="pdf-drop-note">仅支持含书签目录的 PDF</p>
           </div>
 
-          <!-- Loading state -->
           <div class="pdf-loading" id="pdfLoading" style="display:none">
             <div class="spinner"></div>
             <p>正在提取目录，请稍候…</p>
           </div>
 
-          <!-- Error state -->
           <div class="pdf-error" id="pdfError" style="display:none">
             <p class="pdf-error-icon">⚠️</p>
             <p id="pdfErrorMsg"></p>
             <button class="btn-retry" id="btnRetry">重新选择</button>
           </div>
 
-          <!-- No outline fallback -->
           <div class="pdf-no-outline" id="pdfNoOutline" style="display:none">
             <p class="pdf-error-icon">📋</p>
-            <p>此 PDF 没有书签目录，请手动粘贴目录文本：</p>
-            <textarea class="toc-paste" id="tocPaste"
-              placeholder="例：&#10;Chapter 3 Linear Algebra&#10;3.1 Vector Spaces&#10;3.2 Subspaces&#10;3.3 Linear Independence&#10;Chapter 4 Matrix Operations&#10;4.1 Matrix Addition"></textarea>
-            <button class="btn-parse-text" id="btnParseText">解析文本目录</button>
+            <p class="no-outline-title">此 PDF 没有书签目录</p>
+
+            <div class="no-outline-options">
+              <div class="no-outline-opt">
+                <p class="no-outline-opt-label">粘贴目录文本</p>
+                <textarea class="toc-paste" id="tocPaste"
+                  placeholder="例：&#10;Chapter 3 Linear Algebra&#10;3.1 Vector Spaces&#10;3.2 Subspaces&#10;3.3 Linear Independence&#10;Chapter 4 Matrix Operations&#10;4.1 Matrix Addition"></textarea>
+                <button class="btn-parse-text" id="btnParseText">解析文本目录</button>
+              </div>
+              <div class="no-outline-or">或使用 AI 提取</div>
+              <div class="no-outline-opt" style="text-align:center">
+                <p class="no-outline-opt-desc">通过 MinerU 解析 PDF 内容，再由 Gemini 自动生成章节目录结构<br><span style="font-size:11px;opacity:.6">（支持 3.5MB 以内的 PDF）</span></p>
+                <button class="btn-submit" id="btnMineruExtract">🤖 AI 智能提取目录</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="pdf-mineru-process" id="pdfMineruProcess" style="display:none">
+            <div class="mineru-steps">
+              <div class="mineru-step" id="mStep1"><div class="mineru-dot"></div><div class="mineru-step-name">上传文件</div></div>
+              <div class="mineru-step-line"></div>
+              <div class="mineru-step" id="mStep2"><div class="mineru-dot"></div><div class="mineru-step-name">MinerU 解析</div></div>
+              <div class="mineru-step-line"></div>
+              <div class="mineru-step" id="mStep3"><div class="mineru-dot"></div><div class="mineru-step-name">生成目录</div></div>
+            </div>
+            <p class="mineru-status-text" id="mineruStatusText">正在准备…</p>
+            <div class="mineru-range-section" id="mineruRangeSection" style="display:none">
+              <label class="form-label" style="margin-bottom:6px">描述要导入的章节范围（支持自然语言，留空则导入全部）</label>
+              <textarea class="toc-paste" id="mineruRangeInput" rows="3"
+                placeholder="例如：从第3章微分方程到非线性微分方程通解&#10;或：第3章和第4章全部内容"></textarea>
+              <button class="btn-submit" id="btnMineruGenTOC" style="margin-top:10px">✨ 生成目录结构</button>
+            </div>
+            <button class="btn-cancel" id="btnMineruBack" style="margin-top:14px">← 返回</button>
           </div>
 
         </div>
@@ -145,7 +316,6 @@
         </div>
       </div>
 
-      <!-- ── Step 2: TOC + Range Select ── -->
       <div class="modal-step" id="step2" style="display:none">
         <div class="modal-header">
           <div>
@@ -155,8 +325,6 @@
           <button class="modal-close" id="pdfModalClose2">✕</button>
         </div>
         <div class="modal-body">
-
-          <!-- Range input bar -->
           <div class="range-bar">
             <span class="range-label">选择范围</span>
             <input class="range-input" type="text" id="rangeStart" placeholder="起始  如 3.1" />
@@ -166,15 +334,10 @@
             <button class="btn-sel-all" id="btnSelAll">全选</button>
             <button class="btn-sel-all" id="btnSelNone">清空</button>
           </div>
-
-          <!-- TOC tree -->
           <div class="toc-scroll" id="tocScroll">
             <div class="toc-tree" id="tocTree"></div>
           </div>
-
-          <!-- Selection summary -->
           <div class="toc-summary" id="tocSummary">已选 <strong id="selCount">0</strong> 个章节 / <strong id="selSecCount">0</strong> 个小节</div>
-
         </div>
         <div class="modal-footer">
           <button class="btn-cancel" id="step2Back">← 上一步</button>
@@ -195,13 +358,10 @@
       <form class="modal-form" id="editCourseForm">
         <label class="form-label">课程名称 <span class="required">*</span></label>
         <input class="form-input" type="text" id="editName" maxlength="40" required />
-
         <label class="form-label">科目分类</label>
         <input class="form-input" type="text" id="editSubject" maxlength="20" />
-
         <label class="form-label">考试日期</label>
         <input class="form-input" type="date" id="editDate" />
-
         <label class="form-label">课程颜色</label>
         <div class="color-picker" id="editColorPicker">
           <button type="button" class="color-swatch" data-color="#5B8DEF" style="background:#5B8DEF"></button>
@@ -213,7 +373,6 @@
           <button type="button" class="color-swatch" data-color="#FB7185" style="background:#FB7185"></button>
           <button type="button" class="color-swatch" data-color="#34D399" style="background:#34D399"></button>
         </div>
-
         <div class="form-actions">
           <button type="button" class="btn-cancel" id="editCourseCancel">取消</button>
           <button type="submit" class="btn-submit">保存更改</button>
@@ -241,111 +400,17 @@
     </div>
   </div>
 
-  <!-- AI Study Plan Modal -->
-  <div class="modal-overlay" id="aiModal">
-    <div class="modal modal-ai" id="aiModalBox">
-
-      <!-- Setup panel -->
-      <div class="ai-panel" id="aiSetupPanel">
-        <div class="modal-header">
-          <h3 class="modal-title">✨ AI 复习计划</h3>
-          <button class="modal-close" id="aiModalClose">✕</button>
-        </div>
-        <div class="modal-body ai-setup-body">
-          <div class="ai-row">
-            <div class="ai-field">
-              <label class="ai-label">考前剩余天数</label>
-              <input class="ai-input-sm" type="number" id="aiDaysLeft" min="1" max="365" value="7" />
-            </div>
-            <div class="ai-field">
-              <label class="ai-label">每天可用时间（小时）</label>
-              <input class="ai-input-sm" type="number" id="aiHoursPerDay" min="0.5" max="24" step="0.5" value="3" />
-            </div>
-            <div class="ai-field">
-              <label class="ai-label">AI 模型</label>
-              <div class="ai-provider-btns" id="aiProviderBtns">
-                <button class="ai-provider-btn active" data-provider="gemini">Gemini</button>
-                <button class="ai-provider-btn" data-provider="claude">Claude</button>
-              </div>
-            </div>
-          </div>
-          <!-- Guide Input Tabs -->
-          <div class="ai-guide-wrap">
-            <div class="ai-label" style="margin-bottom:8px">复习指导资料 <span class="ai-optional">（选填，支持文字 / PDF / 网页）</span></div>
-            <div class="ai-tabs" id="aiTabs">
-              <button class="ai-tab active" data-tab="text">文字输入</button>
-              <button class="ai-tab" data-tab="pdf">PDF 文件</button>
-              <button class="ai-tab" data-tab="url">网页链接</button>
-            </div>
-
-            <!-- Text pane -->
-            <div class="ai-pane" id="aiPaneText">
-              <textarea class="ai-textarea" id="aiReviewGuide"
-                placeholder="粘贴老师发的复习提纲、考试重点、题型说明等内容…"></textarea>
-            </div>
-
-            <!-- PDF pane -->
-            <div class="ai-pane" id="aiPanePdf" style="display:none">
-              <div class="ai-upload-zone" id="aiPdfZone">
-                <div class="ai-upload-icon">📄</div>
-                <p>上传小型 PDF，AI 将自动提取文字内容</p>
-                <label class="btn-pdf-pick" for="aiPdfFile">选择 PDF 文件</label>
-                <input type="file" id="aiPdfFile" accept=".pdf" style="display:none" />
-              </div>
-              <div class="ai-loaded-file" id="aiPdfLoaded" style="display:none">
-                <span class="ai-loaded-icon">✅</span>
-                <span id="aiPdfName" class="ai-loaded-name"></span>
-                <span id="aiPdfChars" class="ai-loaded-meta"></span>
-                <button id="aiPdfClear" class="ai-loaded-clear">✕ 重新选择</button>
-              </div>
-            </div>
-
-            <!-- URL pane -->
-            <div class="ai-pane" id="aiPaneUrl" style="display:none">
-              <div class="ai-url-row">
-                <input class="ai-url-input" type="url" id="aiUrlInput" placeholder="https://…" />
-                <button class="btn-sm" id="aiFetchUrlBtn">获取内容</button>
-              </div>
-              <div class="ai-url-status" id="aiUrlStatus"></div>
-              <div class="ai-loaded-file" id="aiUrlLoaded" style="display:none">
-                <span class="ai-loaded-icon">✅</span>
-                <span id="aiUrlChars" class="ai-loaded-meta"></span>
-                <button id="aiUrlClear" class="ai-loaded-clear">✕ 清除</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn-cancel" id="aiCancelBtn">取消</button>
-          <button class="btn-submit" id="aiBtnGenerate">✨ 生成复习计划</button>
-        </div>
-      </div>
-
-      <!-- Chat panel -->
-      <div class="ai-panel" id="aiChatPanel" style="display:none">
-        <div class="modal-header">
-          <h3 class="modal-title">AI 学习助手</h3>
-          <div class="ai-chat-header-btns">
-            <button class="btn-sm" id="aiBtnRestart">↺ 重新开始</button>
-            <button class="modal-close" id="aiChatClose">✕</button>
-          </div>
-        </div>
-        <div class="ai-chat-messages" id="aiChatMessages"></div>
-        <div class="ai-chat-footer">
-          <textarea class="ai-chat-input" id="aiChatInput"
-            placeholder="继续提问，例如：帮我重点复习第3章… （Enter 发送，Shift+Enter 换行）" rows="2"></textarea>
-          <button class="ai-chat-send" id="aiChatSend">发送</button>
-        </div>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- Text Edit Modal -->
+  <!-- Text Edit / Rename Modal -->
   <div class="modal-overlay" id="textEditModal">
     <div class="modal modal-text-edit">
       <div class="modal-header">
-        <h3 class="modal-title" id="textEditTitle">查看 / 编辑</h3>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px">
+            <h3 class="modal-title" id="textEditTitle">查看 / 编辑</h3>
+            <button class="btn-sm" id="textEditRenameBtn" style="font-size:11px;padding:3px 8px">✎ 重命名</button>
+          </div>
+          <input class="form-input" id="textEditRenameInput" style="display:none;margin-top:6px;font-size:13px" placeholder="输入新文件名" />
+        </div>
         <button class="modal-close" id="textEditClose">✕</button>
       </div>
       <div class="modal-body text-edit-body">
@@ -358,10 +423,27 @@
     </div>
   </div>
 
+  <!-- Rename file modal (for non-text files) -->
+  <div class="modal-overlay" id="renameModal">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h3 class="modal-title">重命名文件</h3>
+        <button class="modal-close" id="renameClose">✕</button>
+      </div>
+      <div class="modal-body" style="padding-bottom:0">
+        <label class="form-label">新文件名</label>
+        <input class="form-input" id="renameInput" maxlength="120" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="renameCancel">取消</button>
+        <button class="btn-submit" id="renameConfirm">确认重命名</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="course.js?v=2"></script>
+  <script src="course.js?v=4"></script>
 </body>
 </html>
