@@ -66,12 +66,13 @@ function daysUntil(dateStr) {
 
 function daysBadge(dateStr) {
   const d = daysUntil(dateStr);
-  if (d === null) return `<span class="days-badge no-date">暂无考试日期</span>`;
-  if (d < 0)  return `<span class="days-badge urgent">已过期</span>`;
-  if (d === 0) return `<span class="days-badge urgent">今天考试！</span>`;
-  if (d <= 7)  return `<span class="days-badge urgent">还有 ${d} 天</span>`;
-  if (d <= 30) return `<span class="days-badge soon">还有 ${d} 天</span>`;
-  return `<span class="days-badge normal">还有 ${d} 天</span>`;
+  if (d === null) return `<span class="days-badge no-date">${window.t('noDate')}</span>`;
+  if (d < 0)  return `<span class="days-badge urgent">${window.t('expired')}</span>`;
+  if (d === 0) return `<span class="days-badge urgent">${window.t('examToday')}</span>`;
+  const label = window.tf('daysLeft', { n: d });
+  if (d <= 7)  return `<span class="days-badge urgent">${label}</span>`;
+  if (d <= 30) return `<span class="days-badge soon">${label}</span>`;
+  return `<span class="days-badge normal">${label}</span>`;
 }
 
 function progressOf(course) {
@@ -103,11 +104,11 @@ function renderCard(course, index) {
       ${course.subject ? `<span class="card-subject">${escHtml(course.subject)}</span>` : ''}
       <div class="card-meta">
         ${examFormatted ? `<span>📅 ${examFormatted}</span>` : ''}
-        ${course.totalTopics ? `<span>📋 ${course.completedTopics}/${course.totalTopics} 章节</span>` : ''}
+        ${course.totalTopics ? `<span>📋 ${window.tf('chaptersCount', { done: course.completedTopics, total: course.totalTopics })}</span>` : ''}
       </div>
       <div class="card-progress-wrap">
         <div class="card-progress-row">
-          <span>复习进度</span>
+          <span>${window.t('studyProgress')}</span>
           <span class="card-progress-pct">${pct}%</span>
         </div>
         <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -145,11 +146,11 @@ function render() {
 }
 
 function updateHeaderStats() {
-  totalCoursesLbl.textContent = `${courses.length} 门课程`;
+  totalCoursesLbl.textContent = window.tf('totalCoursesCount', { n: courses.length });
   const avg = courses.length
     ? Math.round(courses.reduce((s, c) => s + progressOf(c), 0) / courses.length)
     : 0;
-  avgProgressLbl.textContent = `平均进度 ${avg}%`;
+  avgProgressLbl.textContent = window.tf('avgProgressText', { n: avg });
 }
 
 // ── Navigation (stub) ─────────────────────────────────────────────────────────
@@ -204,7 +205,7 @@ courseForm.addEventListener('submit', (e) => {
   saveCourses(courses);
   render();
   closeModal();
-  showToast(`「${name}」已添加 ✓`);
+  showToast(window.tf('courseAdded', { name }));
 });
 
 // ── Context Menu ──────────────────────────────────────────────────────────────
@@ -216,8 +217,8 @@ function showContextMenu(e, courseId) {
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
   menu.innerHTML = `
-    <button data-action="open">打开课程</button>
-    <button data-action="delete" class="danger">删除课程</button>
+    <button data-action="open">${window.t('openCourse')}</button>
+    <button data-action="delete" class="danger">${window.t('deleteCourse')}</button>
   `;
 
   const rect = e.target.getBoundingClientRect();
@@ -245,7 +246,7 @@ function deleteCourse(id) {
   courses = courses.filter(c => c.id !== id);
   saveCourses(courses);
   render();
-  if (course) showToast(`已删除「${course.name}」`);
+  if (course) showToast(window.tf('courseDeleted', { name: course.name }));
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────────────

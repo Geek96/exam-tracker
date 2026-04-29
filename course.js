@@ -98,7 +98,7 @@ function renderProgress() {
   heroPct.textContent = `${pct}%`;
   heroFill.style.width = `${pct}%`;
   heroFill.style.background = course.color || 'var(--accent)';
-  heroCounts.textContent = total ? `已完成 ${done} / ${total} 个知识点` : '暂无章节 — 请导入或手动添加';
+  heroCounts.textContent = total ? window.tf('heroCompleted', { done, total }) : window.t('noChaptersAddHint');
 
   course.completedTopics = done;
   course.totalTopics = total;
@@ -139,8 +139,8 @@ function updateChapterNavCard() {
   const fill = document.getElementById('chapterNavFill');
   const pctEl = document.getElementById('chapterNavPct');
   if (meta) meta.textContent = course.chapters.length > 0
-    ? `${course.chapters.length} 章 · ${totalLeaves} 个知识点`
-    : '暂无章节 — 点击导入';
+    ? window.tf('chapMeta', { n: course.chapters.length, pts: totalLeaves })
+    : window.t('noChaptersImport');
   if (fill) { fill.style.width = `${pct}%`; fill.style.background = course.color || 'var(--accent)'; }
   if (pctEl) pctEl.textContent = `${pct}%`;
 }
@@ -161,7 +161,7 @@ function buildChapterEl(ch, ci) {
              ${allDone ? 'checked' : ''} data-ci="${ci}" />
       <div class="chapter-title-wrap">
         <div class="chapter-name">${escHtml(ch.title)}</div>
-        <div class="chapter-sec-count">${totalSecs} 个知识点</div>
+        <div class="chapter-sec-count">${window.tf('secCount', { n: totalSecs })}</div>
       </div>
       <div class="chapter-progress-mini">
         <div class="mini-bar"><div class="mini-fill" style="width:${pct}%;background:${course.color}"></div></div>
@@ -369,11 +369,11 @@ function mjRender() {
   }
   const lbl = document.getElementById('mfBadgeLabel');
   if (lbl) {
-    if (active.length === 0) lbl.textContent = '任务已完成';
+    if (active.length === 0) lbl.textContent = window.t('aiDone');
     else if (active.length === 1) {
       const s = latest.label.length > 14 ? latest.label.slice(0, 14) + '…' : latest.label;
       lbl.textContent = s;
-    } else lbl.textContent = `${active.length} 个任务进行中`;
+    } else lbl.textContent = window.tf('tasksInProgress', { n: active.length });
   }
 
   // Rebuild expanded job list
@@ -1089,8 +1089,8 @@ function updateSelCount() {
     const checks = [...chEl.querySelectorAll('.toc-sec-check, .toc-sub-check')];
     return checks.some(x => x.checked);
   }).length;
-  document.getElementById('selCount').textContent = chaps;
-  document.getElementById('selSecCount').textContent = subs > 0 ? subs : secs;
+  const summary = document.getElementById('tocSummary');
+  if (summary) summary.textContent = window.tf('selectedChaps', { chaps, secs: subs > 0 ? subs : secs });
 }
 
 // ── Range apply ───────────────────────────────────────────────────────────────
@@ -1756,7 +1756,7 @@ async function refreshContextBadge() {
     const countEl = document.getElementById('aiContextCount');
     if (badge && countEl) {
       badge.style.display = mds.length > 0 ? 'flex' : 'none';
-      countEl.textContent = `${mds.length} 个文件`;
+      countEl.textContent = window.tf('filesCount', { n: mds.length });
     }
   } catch {}
 }
