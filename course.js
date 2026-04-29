@@ -1,3 +1,8 @@
+function appLocale() {
+  const lang = localStorage.getItem('app_lang') || 'zh';
+  return lang === 'zh' ? 'zh-CN' : lang === 'es' ? 'es-ES' : 'en-US';
+}
+
 // ── PDF.js setup ──────────────────────────────────────────────────────────────
 const pdfjsLib = window['pdfjs-dist/build/pdf'];
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -49,35 +54,38 @@ function renderHeader() {
   topbarSubject.textContent = course.subject || '';
 
   const d = daysUntil(course.examDate);
-  const dateStr = course.examDate
-    ? new Date(course.examDate).toLocaleDateString('zh-CN', { year:'numeric', month:'long', day:'numeric' })
-    : '–';
-
-  let dClass = 'normal', dText = d !== null ? `还有 ${d} 天` : '–';
+  let dClass = 'normal', dText = '–';
   if (d !== null) {
-    if (d < 0)  { dClass = 'urgent'; dText = '已过期'; }
-    if (d === 0){ dClass = 'urgent'; dText = '今天考试！'; }
+    dText = window.tf('daysLeft', { n: d });
+    if (d < 0)  { dClass = 'urgent'; dText = window.t('expired'); }
+    if (d === 0){ dClass = 'urgent'; dText = window.t('examToday'); }
     if (d <= 7) { dClass = 'urgent'; }
     else if (d <= 30) { dClass = 'soon'; }
   }
 
+  const lang = localStorage.getItem('app_lang') || 'zh';
+  const locale = lang === 'zh' ? 'zh-CN' : lang === 'es' ? 'es-ES' : 'en-US';
+  const dateStrFmt = course.examDate
+    ? new Date(course.examDate).toLocaleDateString(locale, { year:'numeric', month:'long', day:'numeric' })
+    : '–';
+
   heroMeta.innerHTML = `
     <div class="hero-meta-item">
-      <span class="hero-meta-label">课程</span>
+      <span class="hero-meta-label">${window.t('courseLabel')}</span>
       <span class="hero-meta-value">${escHtml(course.name)}</span>
     </div>
     ${course.subject ? `
     <div class="hero-meta-item">
-      <span class="hero-meta-label">科目</span>
+      <span class="hero-meta-label">${window.t('subjectMetaLabel')}</span>
       <span class="hero-meta-value">${escHtml(course.subject)}</span>
     </div>` : ''}
     ${course.examDate ? `
     <div class="hero-meta-item">
-      <span class="hero-meta-label">考试日期</span>
-      <span class="hero-meta-value">${dateStr}</span>
+      <span class="hero-meta-label">${window.t('examDate')}</span>
+      <span class="hero-meta-value">${dateStrFmt}</span>
     </div>
     <div class="hero-meta-item">
-      <span class="hero-meta-label">倒计时</span>
+      <span class="hero-meta-label">${window.t('countdown')}</span>
       <span class="hero-meta-value ${dClass}">${dText}</span>
     </div>` : ''}
   `;
@@ -395,7 +403,7 @@ function mjRender() {
     if (j.needsRange) {
       const btn = document.createElement('button');
       btn.className = 'mf-job-action';
-      btn.textContent = '配置目录 →';
+      btn.textContent = window.t('configToc');
       btn.addEventListener('click', () => {
         mfSetExpanded(false);
         openPdfModal();
@@ -625,7 +633,7 @@ document.getElementById('btnParseText').addEventListener('click', () => {
   const text = document.getElementById('tocPaste').value.trim();
   if (!text) return;
   extractedOutline = parseTextTOC(text);
-  if (!extractedOutline.length) { showToast('未能解析出章节，请检查格式'); return; }
+  if (!extractedOutline.length) { showToast(window.t('parseChapError')); return; }
   onOutlineReady();
 });
 
@@ -834,15 +842,17 @@ async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isC
 async function uploadToTmpfiles(arrayBuffer, filename, mimeType) {
   const blob = new Blob([arrayBuffer], { type: mimeType });
   const formData = new FormData();
-  formData.append('file', blob, filename);
-  const upRes = await fetch('https://tmpfiles.org/api/v1/upload', {
+  formData.append('reqtype', 'fileupload');
+  formData.append('time', '72h');
+  formData.append('fileToUpload', blob, filename);
+  const upRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
     method: 'POST',
     body: formData,
   });
   if (!upRes.ok) throw new Error(`文件上传失败：HTTP ${upRes.status}`);
-  const upData = await upRes.json();
-  if (upData.status !== 'success' || !upData.data?.url) throw new Error('上传服务返回异常');
-  return upData.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+  const url = (await upRes.text()).trim();
+  if (!url.startsWith('https://')) throw new Error('上传服务返回异常：' + url.slice(0, 100));
+  return url;
 }
 
 function arrayBufferToBase64(buf) {
@@ -1131,7 +1141,7 @@ function applyRange() {
 
   document.querySelectorAll('.toc-chapter').forEach(ch => refreshChapterCheckState(ch));
   updateSelCount();
-  showToast(`已选范围 ${startStr || '起始'}  至  ${endStr || '结束'}`);
+  showToast(window.tf('rangeSelected', { start: startStr || window.t('rangeStartPh').split('  ')[0], end: endStr || window.t('rangeEndPh').split('  ')[0] }));
 }
 
 document.getElementById('btnSelAll').addEventListener('click', () => {
@@ -1157,7 +1167,7 @@ document.getElementById('step2Back').addEventListener('click', () => {
 // ── Confirm Import ────────────────────────────────────────────────────────────
 document.getElementById('btnImportConfirm').addEventListener('click', () => {
   const imported = buildChaptersFromTree();
-  if (!imported.length) { showToast('请至少选择一个章节'); return; }
+  if (!imported.length) { showToast(window.t('selectAtLeastOne')); return; }
 
   // Merge: append non-duplicate chapters
   const existingTitles = new Set(course.chapters.map(c => c.title));
@@ -1173,7 +1183,7 @@ document.getElementById('btnImportConfirm').addEventListener('click', () => {
   renderChapters();
   renderProgress();
   closePdfModal();
-  showToast(`已导入 ${added} 个章节 ✓`);
+  showToast(window.tf('importedChaps', { n: added }));
 });
 
 function buildChaptersFromTree() {
@@ -1230,7 +1240,7 @@ document.getElementById('manualConfirm').addEventListener('click', () => {
   const text = document.getElementById('manualText').value.trim();
   if (!text) return;
   const parsed = parseTextTOC(text);
-  if (!parsed.length) { showToast('未能解析，请检查格式'); return; }
+  if (!parsed.length) { showToast(window.t('parseFormatError')); return; }
 
   const built = parsed.map(ch => ({
     id: uid(),
@@ -1252,7 +1262,7 @@ document.getElementById('manualConfirm').addEventListener('click', () => {
   persist(); renderChapters(); renderProgress();
   manualModal.classList.remove('open');
   document.getElementById('manualText').value = '';
-  showToast(`已添加 ${built.length} 个章节 ✓`);
+  showToast(window.tf('addedChaps', { n: built.length }));
 });
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
@@ -1340,7 +1350,7 @@ document.getElementById('editCourseForm').addEventListener('submit', (e) => {
   renderHeader();
   renderProgress();
   closeEditCourseModal();
-  showToast('课程信息已更新 ✓');
+  showToast(window.t('courseUpdated'));
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1359,7 +1369,7 @@ btnReset.addEventListener('click', function () {
     this.textContent = '重新开始';
     this.classList.remove('danger');
     delete this.dataset.confirm;
-    showToast('目录已清空，可重新导入');
+    showToast(window.t('chaptersCleared'));
   } else {
     this.dataset.confirm = '1';
     this.textContent = '确认清空？';
@@ -1451,11 +1461,11 @@ async function renderMaterials() {
     card.innerHTML = `
       <div class="material-card-icon">${fileIcon(f.type, f.name)}</div>
       <div class="material-card-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
-      <div class="material-card-meta">${fmtSize(f.size)} · ${new Date(f.addedAt).toLocaleDateString('zh-CN')}</div>
+      <div class="material-card-meta">${fmtSize(f.size)} · ${new Date(f.addedAt).toLocaleDateString(appLocale())}</div>
       <div class="material-card-actions">
-        <button class="btn-mat-open">查看</button>
+        <button class="btn-mat-open">${window.t('viewFile')}</button>
         <button class="btn-mat-rename">✎</button>
-        <button class="btn-mat-del">删除</button>
+        <button class="btn-mat-del">${window.t('deleteFile')}</button>
       </div>`;
     card.querySelector('.btn-mat-open').addEventListener('click', e => {
       e.stopPropagation();
@@ -1474,7 +1484,7 @@ async function renderMaterials() {
       e.stopPropagation();
       await dbDelete(f.id);
       await renderMaterials();
-      showToast('已删除');
+      showToast(window.t('deleted'));
     });
     grid.appendChild(card);
   });
@@ -1501,12 +1511,12 @@ async function uploadMaterialFiles(fileList) {
   }
   if (others.length) {
     await renderMaterials();
-    showToast(`已上传 ${others.length} 个文件`);
+    showToast(window.tf('uploadedFiles', { n: others.length }));
   }
 
   // PDFs: convert to Markdown via MinerU (background)
   for (const file of pdfs) {
-    showToast(`📄 ${file.name} → 正在转换为 Markdown…`);
+    showToast(`📄 ${file.name} ${window.t('convertingToMd')}`);
     startMaterialMineruJob(file, 'pdf');
   }
 }
@@ -1572,7 +1582,7 @@ document.getElementById('materialHtmlInput').addEventListener('change', async e 
   const files = Array.from(e.target.files);
   e.target.value = '';
   for (const file of files) {
-    showToast(`⟨/⟩ ${file.name} → 正在转换为 Markdown…`);
+    showToast(`⟨/⟩ ${file.name} ${window.t('convertingToMd')}`);
     startMaterialMineruJob(file, 'html');
   }
 });
@@ -1588,7 +1598,7 @@ matDropZone.addEventListener('drop', async e => {
   const htmlFiles = all.filter(f => /\.html?$/i.test(f.name));
   const rest      = all.filter(f => !/\.html?$/i.test(f.name));
   for (const file of htmlFiles) {
-    showToast(`⟨/⟩ ${file.name} → 正在转换为 Markdown…`);
+    showToast(`⟨/⟩ ${file.name} ${window.t('convertingToMd')}`);
     startMaterialMineruJob(file, 'html');
   }
   if (rest.length) await uploadMaterialFiles(rest);
@@ -1702,7 +1712,7 @@ function renderHistoryPanel() {
     const item = document.createElement('div');
     item.className = 'ai-conv-item' + (s.id === activeId ? ' active' : '');
     const d = new Date(s.createdAt);
-    const dateStr = d.toLocaleDateString('zh-CN', { month:'numeric', day:'numeric' });
+    const dateStr = d.toLocaleDateString(appLocale(), { month:'numeric', day:'numeric' });
     item.innerHTML = `<div class="ai-conv-title">${escHtml(s.title)}</div><div class="ai-conv-date">${dateStr}</div><button class="ai-conv-del" title="删除">✕</button>`;
     item.querySelector('.ai-conv-del').addEventListener('click', e => { e.stopPropagation(); sessDelete(s.id); });
     item.addEventListener('click', () => { sessSwitch(s.id); });
@@ -1883,7 +1893,7 @@ document.getElementById('aiPdfFile').addEventListener('change', async e => {
     document.getElementById('aiPdfLoaded').style.display = 'flex';
   } catch (err) {
     document.getElementById('aiPdfZone').style.display = 'flex';
-    showToast('PDF 提取失败：' + err.message);
+    showToast(window.t('pdfExtractFailed') + err.message);
   }
 });
 
@@ -1899,7 +1909,7 @@ function resetUrlPane() {
 document.getElementById('aiFetchUrlBtn').addEventListener('click', async () => {
   const url    = document.getElementById('aiUrlInput').value.trim();
   const status = document.getElementById('aiUrlStatus');
-  if (!url) { showToast('请输入链接'); return; }
+  if (!url) { showToast(window.t('enterUrl')); return; }
 
   status.textContent = '正在获取页面内容…';
   document.getElementById('aiUrlLoaded').style.display = 'none';
@@ -2100,7 +2110,7 @@ async function saveMsgAsMaterial(content) {
     size: data.byteLength, data, addedAt: now.toISOString(),
   });
   await renderMaterials();
-  showToast('已保存到课程资料 ✓');
+  showToast(window.t('savedMaterials'));
 }
 
 // ── Text edit modal ───────────────────────────────────────────────────────────
@@ -2151,7 +2161,7 @@ document.getElementById('textEditSave').addEventListener('click', async () => {
   await dbSave({ ...orig, name: finalName, data, size: data.byteLength });
   closeTextEditModal();
   await renderMaterials();
-  showToast('已保存 ✓');
+  showToast(window.t('saved'));
 });
 
 // ── Rename modal (for non-text files) ────────────────────────────────────────
@@ -2183,7 +2193,7 @@ document.getElementById('renameConfirm').addEventListener('click', async () => {
   await dbSave({ ...orig, name: newName });
   closeRenameModal();
   await renderMaterials();
-  showToast('已重命名 ✓');
+  showToast(window.t('renamed'));
 });
 document.getElementById('renameInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('renameConfirm').click();
@@ -2199,7 +2209,7 @@ async function saveMdAsMaterial(mdContent, filename) {
     size: data.byteLength, data, addedAt: new Date().toISOString(),
   });
   await renderMaterials();
-  showToast(`已保存 Markdown 资料：${name} ✓`);
+  showToast(window.tf('savedMdFile', { name }));
 }
 
 const KATEX_OPTS = {

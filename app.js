@@ -1,3 +1,8 @@
+// Redirect first-time visitors to the welcome/language selection page
+if (!localStorage.getItem('app_lang')) {
+  window.location.replace('welcome.html');
+}
+
 // ── Data Layer ──────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'examTrackerCourses';
