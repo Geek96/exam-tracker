@@ -2096,34 +2096,32 @@ async function saveMdAsMaterial(mdContent, filename) {
 }
 
 function mdToHtml(md) {
-  const lines = md.split('\n');
-  const out   = [];
-  let inList  = false;
+  // 1. Protect math blocks before marked touches them (marked would escape LaTeX)
+  const math = [];
+  const safe = md
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
+      math.push({ tex, block: true });
+      return `@@M${math.length - 1}@@`;
+    })
+    .replace(/\$([^$\n]+?)\$/g, (_, tex) => {
+      math.push({ tex, block: false });
+      return `@@M${math.length - 1}@@`;
+    });
 
-  for (const raw of lines) {
-    const line = raw
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  // 2. Parse Markdown
+  let html = marked.parse(safe, { gfm: true, breaks: false });
 
-    if (/^## /.test(raw)) {
-      if (inList) { out.push('</ul>'); inList = false; }
-      out.push(`<h2>${line.replace(/^## /, '')}</h2>`);
-    } else if (/^### /.test(raw)) {
-      if (inList) { out.push('</ul>'); inList = false; }
-      out.push(`<h3>${line.replace(/^### /, '')}</h3>`);
-    } else if (/^- /.test(raw)) {
-      if (!inList) { out.push('<ul>'); inList = true; }
-      out.push(`<li>${line.replace(/^- /, '')}</li>`);
-    } else if (raw.trim() === '') {
-      if (inList) { out.push('</ul>'); inList = false; }
-    } else {
-      if (inList) { out.push('</ul>'); inList = false; }
-      out.push(`<p>${line}</p>`);
+  // 3. Restore math with KaTeX rendering
+  html = html.replace(/@@M(\d+)@@/g, (_, i) => {
+    const { tex, block } = math[+i];
+    try {
+      return katex.renderToString(tex, { displayMode: block, throwOnError: false });
+    } catch {
+      return `<code>${block ? '$$' + tex + '$$' : '$' + tex + '$'}</code>`;
     }
-  }
-  if (inList) out.push('</ul>');
-  return out.join('');
+  });
+
+  return html;
 }
 
 // ── Layout height vars ────────────────────────────────────────────────────────
