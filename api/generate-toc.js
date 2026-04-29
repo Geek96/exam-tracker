@@ -2,13 +2,12 @@
 // Feeds MinerU output + user range description to Gemini.
 // Returns { chapters: [{title, sections:[{title, subsections:[{title}]}]}] }
 
-// Model chain with per-model API version
-// gemini-1.5-flash only exists on v1, not v1beta
+// Model chain — all on v1beta; dated versions are more stable than aliases
 const MODELS = [
-  { id: 'gemini-3-flash-preview', api: 'v1beta' },
-  { id: 'gemini-2.5-flash',       api: 'v1beta' },
-  { id: 'gemini-2.0-flash-lite',  api: 'v1beta' },
-  { id: 'gemini-1.5-flash',       api: 'v1'     },
+  { id: 'gemini-3-flash-preview',           api: 'v1beta' },
+  { id: 'gemini-2.5-flash-preview-04-17',   api: 'v1beta' },
+  { id: 'gemini-2.5-flash',                 api: 'v1beta' },
+  { id: 'gemini-2.0-flash-lite',            api: 'v1beta' },
 ];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -136,7 +135,7 @@ ${rangeHint
 3. 最多三层结构：章 → 节 → 子节
 4. 只输出 JSON，无其他内容`;
 
-  let lastErr = null;
+  const errs = [];
 
   for (const model of MODELS) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -152,20 +151,18 @@ ${rangeHint
         return;
 
       } catch (err) {
-        lastErr = err;
         if (err.retryable) {
-          // Overloaded: wait then retry (same model once, then next model)
           const wait = err.retryAfter ? err.retryAfter * 1000 : 2000 * (attempt + 1);
           await sleep(Math.min(wait, 5000));
           continue;
         }
-        // Non-retryable error from this model — try next model immediately
+        errs.push(`[${model.id}] ${err.message}`);
         break;
       }
     }
   }
 
-  res.status(500).json({ error: 'TOC 生成失败：' + (lastErr?.message || '未知错误') });
+  res.status(500).json({ error: 'TOC 生成失败（所有模型均失败）：\n' + errs.join('\n') });
 }
 
 module.exports = handler;
