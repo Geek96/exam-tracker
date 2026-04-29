@@ -2,6 +2,68 @@
 // Feeds MinerU output + user range description to Gemini.
 // Returns { chapters: [{title, sections:[{title, subsections:[{title}]}]}] }
 
+// Model chain: try 2.5-flash first, fall back to 1.5-flash if overloaded
+const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// Robust JSON cleaner: strips fences, trailing commas, BOM, control chars
+function parseGeminiJson(raw) {
+  let text = raw
+    .replace(/^﻿/, '')                    // BOM
+    .replace(/^```(?:json)?\s*/im, '')         // opening fence
+    .replace(/\s*```\s*$/m, '')                // closing fence
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '') // stray control chars
+    .trim();
+
+  // Strip trailing commas before } or ]
+  text = text.replace(/,(\s*[}\]])/g, '$1');
+
+  // Direct parse attempt
+  try { return JSON.parse(text); } catch {}
+
+  // Extract outermost [...] and retry
+  const m = text.match(/\[[\s\S]*\]/);
+  if (m) {
+    const cleaned = m[0].replace(/,(\s*[}\]])/g, '$1');
+    try { return JSON.parse(cleaned); } catch {}
+  }
+
+  throw new Error('无法从 Gemini 响应中解析 JSON');
+}
+
+async function callGemini(apiKey, model, prompt) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ role: 'user', parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.1 },
+    }),
+    signal: AbortSignal.timeout(45000),
+  });
+
+  const status = res.status;
+
+  if (status === 503 || status === 429) {
+    const retryAfter = parseInt(res.headers.get('Retry-After') || '0', 10);
+    throw Object.assign(new Error(`模型过载 (${status})`), { retryable: true, retryAfter });
+  }
+
+  if (!res.ok) {
+    const errText = await res.text();
+    let msg = errText;
+    try { msg = JSON.parse(errText).error?.message || errText; } catch {}
+    throw new Error('Gemini 错误：' + msg);
+  }
+
+  const data = await res.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  if (!text) throw new Error('Gemini 返回内容为空');
+  return text;
+}
+
 async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).end('Method Not Allowed'); return; }
 
@@ -24,7 +86,6 @@ async function handler(req, res) {
   const { content, range } = body;
   if (!content) { res.status(400).json({ error: '缺少 content 字段' }); return; }
 
-  // Truncate to keep within Gemini token budget
   const truncated = content.slice(0, 50000);
   const rangeHint = (range || '').trim();
 
@@ -69,49 +130,36 @@ ${rangeHint
 3. 最多三层结构：章 → 节 → 子节
 4. 只输出 JSON，无其他内容`;
 
-  try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const gemRes = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 8192, temperature: 0.1 },
-      }),
-      signal: AbortSignal.timeout(60000),
-    });
+  let lastErr = null;
 
-    if (!gemRes.ok) {
-      const errText = await gemRes.text();
-      let msg = errText;
-      try { msg = JSON.parse(errText).error?.message || errText; } catch {}
-      res.status(gemRes.status).json({ error: 'Gemini 错误：' + msg }); return;
+  for (const model of MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const rawText = await callGemini(apiKey, model, prompt);
+        const chapters = parseGeminiJson(rawText);
+
+        if (!Array.isArray(chapters) || chapters.length === 0) {
+          throw new Error('未能提取到章节，请尝试调整范围描述');
+        }
+
+        res.json({ chapters });
+        return;
+
+      } catch (err) {
+        lastErr = err;
+        if (err.retryable) {
+          // Overloaded: wait then retry (same model once, then next model)
+          const wait = err.retryAfter ? err.retryAfter * 1000 : 2000 * (attempt + 1);
+          await sleep(Math.min(wait, 5000));
+          continue;
+        }
+        // Non-retryable error from this model — try next model immediately
+        break;
+      }
     }
-
-    const gemData = await gemRes.json();
-    let text = gemData.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Strip optional code fences Gemini sometimes adds
-    text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
-
-    let chapters;
-    try {
-      chapters = JSON.parse(text);
-    } catch {
-      // If Gemini returned something with surrounding prose, try to extract JSON array
-      const m = text.match(/\[[\s\S]*\]/);
-      if (!m) throw new Error('Gemini 返回格式不正确，无法解析 JSON');
-      chapters = JSON.parse(m[0]);
-    }
-
-    if (!Array.isArray(chapters) || chapters.length === 0) {
-      res.status(500).json({ error: '未能提取到章节，请尝试调整范围描述' }); return;
-    }
-
-    res.json({ chapters });
-  } catch (err) {
-    res.status(500).json({ error: 'TOC 生成失败：' + err.message });
   }
+
+  res.status(500).json({ error: 'TOC 生成失败：' + (lastErr?.message || '未知错误') });
 }
 
 module.exports = handler;
