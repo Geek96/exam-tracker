@@ -2,8 +2,13 @@
 // Feeds MinerU output + user range description to Gemini.
 // Returns { chapters: [{title, sections:[{title, subsections:[{title}]}]}] }
 
-// Model chain: try 2.5-flash first, fall back to 1.5-flash if overloaded
-const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+// Model chain with per-model API version
+// gemini-1.5-flash only exists on v1, not v1beta
+const MODELS = [
+  { id: 'gemini-2.5-flash',     api: 'v1beta' },
+  { id: 'gemini-2.0-flash-lite', api: 'v1beta' },
+  { id: 'gemini-1.5-flash',     api: 'v1'    },
+];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -32,8 +37,8 @@ function parseGeminiJson(raw) {
   throw new Error('无法从 Gemini 响应中解析 JSON');
 }
 
-async function callGemini(apiKey, model, prompt) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+async function callGemini(apiKey, { id: model, api = 'v1beta' }, prompt) {
+  const url = `https://generativelanguage.googleapis.com/${api}/models/${model}:generateContent?key=${apiKey}`;
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
