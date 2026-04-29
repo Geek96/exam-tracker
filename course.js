@@ -652,26 +652,27 @@ async function startMineruFlow() {
   try {
     const chunks = await splitPdfIfNeeded(currentPdfArrayBuffer, 199);
     const total = chunks.length;
-    if (total > 1) setMineruStatus(`PDF 共 ${total} 部分，将依次处理…`);
+    if (total > 1) {
+      setMineruStep(2);
+      setMineruStatus(`PDF 共 ${total} 部分，并行处理中…`);
+      mjUpdate(tocJobId, { step: 2, status: `并行处理 ${total} 部分…` });
+    }
 
-    const markdowns = [];
-    for (let i = 0; i < total; i++) {
-      const prefix = total > 1 ? `[${i + 1}/${total}] ` : '';
-      const step = i < Math.ceil(total / 2) ? 1 : 2;
-      setMineruStep(step);
+    const chunkStatus = Array(total).fill('等待中');
+    const updateStatus = () => {
+      const summary = chunkStatus.map((s, i) => `[${i+1}] ${s}`).join('  ');
+      mjUpdate(tocJobId, { step: 2, status: summary });
+      if (pdfModal.classList.contains('open')) setMineruStatus(summary);
+    };
+
+    const markdowns = await Promise.all(chunks.map((chunk, i) => {
       const chunkName = (pdfFileName || 'upload.pdf').replace(/\.pdf$/i,
         total > 1 ? `_p${i + 1}.pdf` : '.pdf');
-
-      const md = await mineruSubmitAndPoll(
-        chunks[i], chunkName, 'pdf',
-        msg => {
-          setMineruStatus(prefix + msg);
-          mjUpdate(tocJobId, { step, status: prefix + msg });
-        },
+      return mineruSubmitAndPoll(chunk, chunkName, 'pdf',
+        msg => { chunkStatus[i] = msg; if (total > 1) updateStatus(); else { setMineruStatus(msg); mjUpdate(tocJobId, { step: 2, status: msg }); } },
         isCancelled
       );
-      markdowns.push(md);
-    }
+    }));
 
     mineruContent = markdowns.join('\n\n');
     mjUpdate(tocJobId, { step: 3, status: '✅ 解析完成，点击「配置目录 →」继续', needsRange: true, mdContent: mineruContent });
@@ -1532,17 +1533,18 @@ async function startMaterialMineruJob(file, fileType) {
     } else {
       const chunks = await splitPdfIfNeeded(buf, 199);
       const total = chunks.length;
-      const markdowns = [];
-      for (let i = 0; i < total; i++) {
-        const prefix = total > 1 ? `[${i + 1}/${total}] ` : '';
+      const chunkStatus = Array(total).fill('等待中');
+      const markdowns = await Promise.all(chunks.map((chunk, i) => {
         const chunkName = file.name.replace(/\.pdf$/i, total > 1 ? `_p${i + 1}.pdf` : '.pdf');
-        const md = await mineruSubmitAndPoll(
-          chunks[i], chunkName, 'pdf',
-          msg => mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: prefix + msg }),
+        return mineruSubmitAndPoll(chunk, chunkName, 'pdf',
+          msg => {
+            chunkStatus[i] = msg;
+            const summary = total > 1 ? chunkStatus.map((s, j) => `[${j+1}] ${s}`).join('  ') : msg;
+            mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: summary });
+          },
           isCancelled
         );
-        markdowns.push(md);
-      }
+      }));
       combinedMarkdown = markdowns.join('\n\n');
     }
 
