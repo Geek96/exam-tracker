@@ -84,8 +84,12 @@ async function handler(req, res) {
     if (!minRes.ok || (minData.code !== undefined && minData.code !== 0)) {
       throw new Error(minData.msg || minData.message || `HTTP ${minRes.status}`);
     }
-    // MinerU returns task ID in data field
-    const taskId = minData.data || minData.task_id || minData.taskId;
+    // MinerU may return task ID as data:"uuid" or data:{task_id:"uuid"}
+    const rd = minData.data;
+    const taskId =
+      (rd && typeof rd === 'string'  ? rd : null) ||
+      (rd && typeof rd === 'object'  ? (rd.task_id || rd.taskId || rd.id) : null) ||
+      minData.task_id || minData.taskId;
     if (!taskId) throw new Error('MinerU 未返回任务ID');
     res.json({ taskId: String(taskId) });
   } catch (err) {

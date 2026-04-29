@@ -388,13 +388,16 @@ function mjRender() {
       return `<span class="mf-dot-mini${dc ? ' ' + dc : ''}"></span>${i < 3 ? '<span class="mf-line-mini"></span>' : ''}`;
     }).join('');
     item.innerHTML = `<div class="mf-job-label">${escHtml(j.label)}</div><div class="mf-job-steps">${stepsHtml}</div><div class="mf-job-status">${escHtml(j.status)}</div>`;
+    // Footer row: action buttons
+    const footer = document.createElement('div');
+    footer.className = 'mf-job-footer';
+
     if (j.needsRange) {
       const btn = document.createElement('button');
       btn.className = 'mf-job-action';
       btn.textContent = '配置目录 →';
       btn.addEventListener('click', () => {
         mfSetExpanded(false);
-        // Restore modal at range input
         openPdfModal();
         showSubstate('mineru');
         setMineruStep(3);
@@ -405,16 +408,36 @@ function mjRender() {
         j.needsRange = false;
         mjRender();
       });
-      item.appendChild(btn);
+      footer.appendChild(btn);
     }
+
+    if (!j.done && !j.failed) {
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'mf-cancel-btn';
+      cancelBtn.textContent = '终止解析';
+      cancelBtn.addEventListener('click', () => {
+        if (j.pollTimer) clearInterval(j.pollTimer);
+        if (j.type === 'toc' && currentTocJobId === j.id) {
+          clearInterval(mineruPollTimer);
+          mineruTaskId = null;
+          mineruContent = null;
+          currentTocJobId = null;
+        }
+        mjUpdate(j.id, { failed: true, status: '已手动终止' });
+        setTimeout(() => { mjJobs.delete(j.id); mjRender(); }, 3000);
+      });
+      footer.appendChild(cancelBtn);
+    }
+
     if (j.done || j.failed) {
       const db = document.createElement('button');
       db.className = 'mf-dismiss-btn';
-      db.textContent = '✕';
-      db.title = '关闭';
+      db.textContent = '✕ 关闭';
       db.addEventListener('click', () => { mjJobs.delete(j.id); mjRender(); });
-      item.appendChild(db);
+      footer.appendChild(db);
     }
+
+    item.appendChild(footer);
     list.appendChild(item);
   });
 }
@@ -427,8 +450,45 @@ function mfSetExpanded(v) {
   if (panel) panel.style.display = mfExpanded ? 'block' : 'none';
   if (icon)  icon.textContent    = mfExpanded ? '▲' : '▼';
 }
-document.getElementById('mfBadge').addEventListener('click', () => mfSetExpanded(!mfExpanded));
 document.getElementById('mfCollapseBtn').addEventListener('click', () => mfSetExpanded(false));
+
+// ── Draggable float widget ──────────────────────────────────────────────────
+(function() {
+  const el    = document.getElementById('mineruFloat');
+  const badge = document.getElementById('mfBadge');
+  if (!el || !badge) return;
+  let dragging = false, wasDragged = false;
+  let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+  badge.addEventListener('pointerdown', e => {
+    if (e.button !== 0) return;
+    const rect = el.getBoundingClientRect();
+    el.style.right  = 'auto';
+    el.style.bottom = 'auto';
+    el.style.left   = rect.left + 'px';
+    el.style.top    = rect.top  + 'px';
+    startX = e.clientX; startY = e.clientY;
+    startLeft = rect.left; startTop = rect.top;
+    dragging = true; wasDragged = false;
+    badge.classList.add('dragging');
+    badge.setPointerCapture(e.pointerId);
+  });
+
+  badge.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const dx = e.clientX - startX, dy = e.clientY - startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wasDragged = true;
+    el.style.left = Math.max(0, Math.min(window.innerWidth  - el.offsetWidth,  startLeft + dx)) + 'px';
+    el.style.top  = Math.max(0, Math.min(window.innerHeight - el.offsetHeight, startTop  + dy)) + 'px';
+  });
+
+  badge.addEventListener('pointerup', e => {
+    if (!dragging) return;
+    dragging = false;
+    badge.classList.remove('dragging');
+    if (!wasDragged) mfSetExpanded(!mfExpanded);
+  });
+})();
 
 // ── Open / close ──────────────────────────────────────────────────────────────
 const pdfModal         = document.getElementById('pdfModal');

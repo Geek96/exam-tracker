@@ -1835,6 +1835,8 @@
 
 .mf-badge-label { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; }
 .mf-expand-icon { font-size: 9px; color: var(--muted); }
+.mf-badge { cursor: grab; }
+.mf-badge.dragging { cursor: grabbing; }
 
 .mf-panel {
   background: rgba(7,8,15,0.94);
@@ -1906,3 +1908,15 @@
   transition: color 0.15s;
 }
 .mf-dismiss-btn:hover { color: var(--muted); }
+
+.mf-job-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.mf-cancel-btn {
+  background: none;
+  border: 1px solid rgba(249,123,107,0.35);
+  border-radius: 6px;
+  color: rgba(249,123,107,0.7);
+  font-size: 11px; cursor: pointer;
+  padding: 3px 9px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.mf-cancel-btn:hover { background: rgba(249,123,107,0.12); color: #F97B6B; border-color: #F97B6B; }
