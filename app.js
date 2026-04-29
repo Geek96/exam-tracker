@@ -265,6 +265,23 @@ function escHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+// ── Language switcher ─────────────────────────────────────────────────────────
+
+function initLangSwitcher() {
+  const lang = localStorage.getItem('app_lang') || 'zh';
+  document.querySelectorAll('.lang-sw-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+    btn.addEventListener('click', () => {
+      localStorage.setItem('app_lang', btn.dataset.lang);
+      document.querySelectorAll('.lang-sw-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === btn.dataset.lang));
+      if (typeof applyStrings === 'function') applyStrings();
+      render();
+    });
+  });
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 render();
+if (typeof applyStrings === 'function') applyStrings();
+initLangSwitcher();

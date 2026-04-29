@@ -1,0 +1,192 @@
+/* ── Welcome Page Styles ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --holo-pink:   #FF6EC7;
+  --holo-cyan:   #00E5FF;
+  --holo-purple: #B44FFF;
+  --holo-silver: #C8D6E8;
+  --holo-gold:   #FFD580;
+  --bg:          #07080F;
+  --text:        #F0F2FF;
+  --muted:       rgba(200,214,232,0.55);
+  --surface:     rgba(255,255,255,0.048);
+  --border:      rgba(255,255,255,0.09);
+}
+
+body {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 900px 700px at  8%  12%, rgba(180,79,255,0.20) 0%, transparent 62%),
+    radial-gradient(ellipse 800px 600px at 92%  88%, rgba(0,229,255,0.16) 0%, transparent 62%),
+    radial-gradient(ellipse 600px 800px at 55%  45%, rgba(255,110,199,0.12) 0%, transparent 62%);
+  background-attachment: fixed;
+  color: var(--text);
+  font-family: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* Animated noise overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity: 0.025;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Card ── */
+.welcome-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 24px;
+  padding: 56px 48px 44px;
+  max-width: 440px;
+  width: 90%;
+  text-align: center;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 32px 80px rgba(0,0,0,0.55),
+    0 0 60px rgba(180,79,255,0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* Holo border shimmer */
+.welcome-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 25px;
+  background: linear-gradient(135deg, var(--holo-cyan), var(--holo-purple), var(--holo-pink), var(--holo-gold), var(--holo-cyan));
+  background-size: 300% 300%;
+  animation: holo-shift 6s ease infinite;
+  opacity: 0.18;
+  z-index: -1;
+  pointer-events: none;
+}
+
+@keyframes holo-shift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ── Glyph / icon ── */
+.welcome-glyph {
+  font-size: 48px;
+  line-height: 1;
+  margin-bottom: 20px;
+  display: block;
+  filter: drop-shadow(0 0 18px rgba(180,79,255,0.5));
+}
+
+/* ── App name ── */
+.welcome-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  background: linear-gradient(135deg, var(--holo-cyan), var(--holo-purple), var(--holo-pink));
+  background-size: 200% 200%;
+  animation: holo-shift 6s ease infinite;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.welcome-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 36px;
+  line-height: 1.5;
+}
+
+/* ── Language picker ── */
+.lang-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+
+.lang-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.lang-btn {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: all 0.18s;
+  min-width: 80px;
+}
+
+.lang-btn:hover {
+  color: var(--text);
+  border-color: rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.04);
+}
+
+.lang-btn.selected {
+  color: var(--holo-cyan);
+  border-color: var(--holo-cyan);
+  background: rgba(0,229,255,0.08);
+  box-shadow: 0 0 12px rgba(0,229,255,0.15);
+}
+
+/* ── Enter button ── */
+.enter-btn {
+  display: block;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--holo-purple), var(--holo-pink));
+  background-size: 200% 200%;
+  animation: holo-shift 6s ease infinite;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 4px 20px rgba(180,79,255,0.35);
+}
+
+.enter-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.enter-btn:active {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+/* ── Auth placeholder ── */
+.auth-note {
+  margin-top: 22px;
+  font-size: 11px;
+  color: rgba(200,214,232,0.3);
+  letter-spacing: 0.02em;
+}

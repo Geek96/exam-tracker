@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>考试复习追踪器</title>
   <link rel="stylesheet" href="styles.css" />
+  <script src="strings.js"></script>
 </head>
 <body>
 
@@ -13,11 +14,16 @@
     <div class="header-inner">
       <div class="logo">
         <span class="logo-icon">📚</span>
-        <span class="logo-text">复习追踪器</span>
+        <span class="logo-text" data-i18n="appName">复习追踪器</span>
       </div>
       <div class="header-stats" id="headerStats">
         <span class="stat-pill" id="totalCoursesLabel">0 门课程</span>
         <span class="stat-pill accent" id="avgProgressLabel">平均进度 0%</span>
+      </div>
+      <div class="lang-switcher" id="langSwitcher">
+        <button class="lang-sw-btn" data-lang="zh">中</button>
+        <button class="lang-sw-btn" data-lang="en">EN</button>
+        <button class="lang-sw-btn" data-lang="es">ES</button>
       </div>
     </div>
   </header>
@@ -27,17 +33,17 @@
 
     <!-- Section title row -->
     <div class="section-row">
-      <h2 class="section-title">我的课程</h2>
+      <h2 class="section-title" data-i18n="myCourses">我的课程</h2>
       <button class="btn-add" id="btnAddCourse">
-        <span class="btn-add-icon">+</span> 添加课程
+        <span class="btn-add-icon">+</span> <span data-i18n="addCourse">+ 添加课程</span>
       </button>
     </div>
 
     <!-- Empty state -->
     <div class="empty-state" id="emptyState">
       <div class="empty-icon">🎯</div>
-      <p class="empty-title">还没有课程</p>
-      <p class="empty-sub">点击「添加课程」开始规划你的复习计划</p>
+      <p class="empty-title" data-i18n="noCoursesTitle">还没有课程</p>
+      <p class="empty-sub" data-i18n="noCoursesHint">点击「添加课程」开始规划你的复习计划</p>
     </div>
 
     <!-- Course grid -->
@@ -49,7 +55,7 @@
   <div class="modal-overlay" id="modalOverlay">
     <div class="modal" id="modal">
       <div class="modal-header">
-        <h3 class="modal-title">添加新课程</h3>
+        <h3 class="modal-title" data-i18n="addCourseTitle">添加新课程</h3>
         <button class="modal-close" id="modalClose">✕</button>
       </div>
       <form class="modal-form" id="courseForm">

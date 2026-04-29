@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Study Tracker / 复习追踪器</title>
+  <link rel="stylesheet" href="welcome.css" />
+</head>
+<body>
+
+  <div class="welcome-card">
+    <span class="welcome-glyph">📚</span>
+    <h1 class="welcome-title" id="welcomeTitle">复习追踪器</h1>
+    <p class="welcome-sub" id="welcomeSub">选择语言开始使用</p>
+
+    <p class="lang-label" id="langLabel">语言 / Language</p>
+    <div class="lang-btns">
+      <button class="lang-btn" data-lang="zh">中文</button>
+      <button class="lang-btn" data-lang="en">English</button>
+      <button class="lang-btn" data-lang="es">Español</button>
+    </div>
+
+    <button class="enter-btn" id="enterBtn">进入 →</button>
+
+    <p class="auth-note" id="authNote">账号功能即将开放</p>
+  </div>
+
+  <script>
+    (function() {
+      var TITLES = { zh: '复习追踪器', en: 'Study Tracker', es: 'Seguidor de Estudio' };
+      var SUBS   = { zh: '选择语言开始使用', en: 'Select a language to get started', es: 'Elige un idioma para comenzar' };
+      var ENTERS = { zh: '进入 →', en: 'Enter →', es: 'Entrar →' };
+      var AUTH   = { zh: '账号功能即将开放', en: 'Account features coming soon', es: 'Funciones de cuenta próximamente' };
+
+      var savedLang = localStorage.getItem('app_lang') || 'zh';
+      var currentLang = savedLang;
+
+      function applyLang(lang) {
+        currentLang = lang;
+        document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang === 'es' ? 'es' : 'en';
+        document.getElementById('welcomeTitle').textContent = TITLES[lang] || TITLES.zh;
+        document.getElementById('welcomeSub').textContent   = SUBS[lang]   || SUBS.zh;
+        document.getElementById('enterBtn').textContent     = ENTERS[lang] || ENTERS.zh;
+        document.getElementById('authNote').textContent     = AUTH[lang]   || AUTH.zh;
+        document.querySelectorAll('.lang-btn').forEach(function(btn) {
+          btn.classList.toggle('selected', btn.dataset.lang === lang);
+        });
+      }
+
+      document.querySelectorAll('.lang-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          applyLang(btn.dataset.lang);
+        });
+      });
+
+      document.getElementById('enterBtn').addEventListener('click', function() {
+        localStorage.setItem('app_lang', currentLang);
+        window.location.href = 'index.html';
+      });
+
+      applyLang(savedLang);
+    })();
+  </script>
+
+</body>
+</html>

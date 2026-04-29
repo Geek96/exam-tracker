@@ -143,7 +143,7 @@
         <div class="ai-client-header">
           <div class="ai-client-brand">
             <span class="ai-brand-dot"></span>
-            <span class="ai-brand-name">AI 学习助手</span>
+            <span class="ai-brand-name" data-i18n="aiAssistant">AI 学习助手</span>
           </div>
           <div class="ai-client-controls">
             <div class="ai-context-badge" id="aiContextBadge" style="display:none" title="可读取的 Markdown 课程资料">
@@ -153,89 +153,97 @@
               <button class="ai-model-btn active" data-provider="gemini">Gemini</button>
               <button class="ai-model-btn" data-provider="claude">Claude</button>
             </div>
-            <button class="ai-settings-toggle" id="aiSettingsToggle" title="复习设置">⚙</button>
-            <button class="btn-sm ai-restart-btn" id="aiBtnRestart" title="清空对话">↺</button>
+            <button class="btn-sm ai-history-btn" id="aiBtnHistory" title="历史对话">🕐 历史</button>
           </div>
         </div>
 
-        <!-- Settings panel (collapsible) -->
-        <div class="ai-settings-panel" id="aiSettingsPanel" style="display:none">
-          <div class="ai-settings-row">
-            <div class="ai-field">
-              <label class="ai-label">距考试天数</label>
-              <input class="ai-input-sm" type="number" id="aiDaysLeft" min="1" max="365" value="7" />
-            </div>
-            <div class="ai-field">
-              <label class="ai-label">每天学习（小时）</label>
-              <input class="ai-input-sm" type="number" id="aiHoursPerDay" min="0.5" max="24" step="0.5" value="3" />
-            </div>
-          </div>
-        </div>
+        <!-- Hidden inputs for AI settings (kept for JS access) -->
+        <input type="hidden" id="aiDaysLeft" value="7" />
+        <input type="hidden" id="aiHoursPerDay" value="3" />
 
-        <!-- Messages area -->
-        <div class="ai-client-messages" id="aiChatMessages">
-          <!-- Welcome state (hidden once chat starts) -->
-          <div class="ai-welcome-state" id="aiWelcomeState">
-            <div class="ai-welcome-glyph">✦</div>
-            <h3 class="ai-welcome-title">AI 学习助手</h3>
-            <p class="ai-welcome-sub">我可以帮你制定复习计划、解答课程疑问、分析重点内容。</p>
-            <div class="ai-quick-actions" id="aiQuickActions">
-              <button class="ai-quick-btn" data-prompt-type="plan">📋 生成复习计划</button>
-              <button class="ai-quick-btn" data-prompt-type="summary">📖 总结课程重点</button>
-              <button class="ai-quick-btn" data-prompt-type="quiz">❓ 出题测验</button>
-            </div>
-          </div>
-        </div>
+        <!-- Two-column body: history sidebar + chat main -->
+        <div class="ai-client-body" id="aiClientBody">
 
-        <!-- Guide attachment panel (toggleable) -->
-        <div class="ai-guide-panel" id="aiGuidePanel" style="display:none">
-          <div class="ai-tabs" id="aiTabs">
-            <button class="ai-tab active" data-tab="text">文字</button>
-            <button class="ai-tab" data-tab="pdf">PDF</button>
-            <button class="ai-tab" data-tab="url">链接</button>
-          </div>
-          <div class="ai-pane" id="aiPaneText">
-            <textarea class="ai-textarea ai-guide-textarea" id="aiReviewGuide"
-              placeholder="粘贴老师发的复习提纲、考试重点、题型说明…"></textarea>
-          </div>
-          <div class="ai-pane" id="aiPanePdf" style="display:none">
-            <div class="ai-upload-zone" id="aiPdfZone">
-              <div class="ai-upload-icon">📄</div>
-              <p>上传小型 PDF，AI 将自动提取文字内容</p>
-              <label class="btn-pdf-pick" for="aiPdfFile">选择 PDF 文件</label>
-              <input type="file" id="aiPdfFile" accept=".pdf" style="display:none" />
+          <!-- History sidebar -->
+          <div class="ai-history-panel" id="aiHistoryPanel">
+            <div class="ai-history-head">
+              <span class="ai-history-title">历史对话</span>
+              <button class="ai-new-conv-btn" id="aiNewConvBtn">＋ 新对话</button>
             </div>
-            <div class="ai-loaded-file" id="aiPdfLoaded" style="display:none">
-              <span class="ai-loaded-icon">✅</span>
-              <span id="aiPdfName" class="ai-loaded-name"></span>
-              <span id="aiPdfChars" class="ai-loaded-meta"></span>
-              <button id="aiPdfClear" class="ai-loaded-clear">✕ 重新选择</button>
-            </div>
+            <div class="ai-history-list" id="aiHistoryList"></div>
           </div>
-          <div class="ai-pane" id="aiPaneUrl" style="display:none">
-            <div class="ai-url-row">
-              <input class="ai-url-input" type="url" id="aiUrlInput" placeholder="https://…" />
-              <button class="btn-sm" id="aiFetchUrlBtn">获取内容</button>
-            </div>
-            <div class="ai-url-status" id="aiUrlStatus"></div>
-            <div class="ai-loaded-file" id="aiUrlLoaded" style="display:none">
-              <span class="ai-loaded-icon">✅</span>
-              <span id="aiUrlChars" class="ai-loaded-meta"></span>
-              <button id="aiUrlClear" class="ai-loaded-clear">✕ 清除</button>
-            </div>
-          </div>
-        </div>
 
-        <!-- Input footer -->
-        <div class="ai-client-footer">
-          <div class="ai-input-row">
-            <button class="ai-attach-btn" id="aiAttachBtn" title="附加复习资料">📎</button>
-            <textarea class="ai-client-input" id="aiChatInput"
-              placeholder="向 AI 助手提问…（Enter 发送，Shift+Enter 换行）" rows="1"></textarea>
-            <button class="ai-send-btn" id="aiChatSend">↑</button>
-          </div>
-          <div class="ai-input-hint">AI 可自动读取课程 Markdown 资料 · Enter 发送</div>
-        </div>
+          <!-- Chat main -->
+          <div class="ai-chat-main" id="aiChatMain">
+
+            <!-- Messages area -->
+            <div class="ai-client-messages" id="aiChatMessages">
+              <!-- Welcome state (hidden once chat starts) -->
+              <div class="ai-welcome-state" id="aiWelcomeState">
+                <div class="ai-welcome-glyph">✦</div>
+                <h3 class="ai-welcome-title" data-i18n="aiAssistant">AI 学习助手</h3>
+                <p class="ai-welcome-sub" data-i18n="aiSub">我可以帮你制定复习计划、解答课程疑问、分析重点内容。</p>
+                <div class="ai-quick-actions" id="aiQuickActions">
+                  <button class="ai-quick-btn" data-prompt-type="plan" data-i18n="genPlan">📋 生成复习计划</button>
+                  <button class="ai-quick-btn" data-prompt-type="summary" data-i18n="summarize">📖 总结课程重点</button>
+                  <button class="ai-quick-btn" data-prompt-type="quiz" data-i18n="quiz">❓ 出题测验</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Guide attachment panel (toggleable) -->
+            <div class="ai-guide-panel" id="aiGuidePanel" style="display:none">
+              <div class="ai-tabs" id="aiTabs">
+                <button class="ai-tab active" data-tab="text">文字</button>
+                <button class="ai-tab" data-tab="pdf">PDF</button>
+                <button class="ai-tab" data-tab="url">链接</button>
+              </div>
+              <div class="ai-pane" id="aiPaneText">
+                <textarea class="ai-textarea ai-guide-textarea" id="aiReviewGuide"
+                  placeholder="粘贴老师发的复习提纲、考试重点、题型说明…"></textarea>
+              </div>
+              <div class="ai-pane" id="aiPanePdf" style="display:none">
+                <div class="ai-upload-zone" id="aiPdfZone">
+                  <div class="ai-upload-icon">📄</div>
+                  <p>上传小型 PDF，AI 将自动提取文字内容</p>
+                  <label class="btn-pdf-pick" for="aiPdfFile">选择 PDF 文件</label>
+                  <input type="file" id="aiPdfFile" accept=".pdf" style="display:none" />
+                </div>
+                <div class="ai-loaded-file" id="aiPdfLoaded" style="display:none">
+                  <span class="ai-loaded-icon">✅</span>
+                  <span id="aiPdfName" class="ai-loaded-name"></span>
+                  <span id="aiPdfChars" class="ai-loaded-meta"></span>
+                  <button id="aiPdfClear" class="ai-loaded-clear">✕ 重新选择</button>
+                </div>
+              </div>
+              <div class="ai-pane" id="aiPaneUrl" style="display:none">
+                <div class="ai-url-row">
+                  <input class="ai-url-input" type="url" id="aiUrlInput" placeholder="https://…" />
+                  <button class="btn-sm" id="aiFetchUrlBtn">获取内容</button>
+                </div>
+                <div class="ai-url-status" id="aiUrlStatus"></div>
+                <div class="ai-loaded-file" id="aiUrlLoaded" style="display:none">
+                  <span class="ai-loaded-icon">✅</span>
+                  <span id="aiUrlChars" class="ai-loaded-meta"></span>
+                  <button id="aiUrlClear" class="ai-loaded-clear">✕ 清除</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Input footer -->
+            <div class="ai-client-footer">
+              <div class="ai-input-row">
+                <button class="ai-attach-btn" id="aiAttachBtn" title="附加复习资料">📎</button>
+                <textarea class="ai-client-input" id="aiChatInput"
+                  data-i18n-ph="askAI"
+                  placeholder="向 AI 助手提问…（Enter 发送，Shift+Enter 换行）" rows="1"></textarea>
+                <button class="ai-send-btn" id="aiChatSend">↑</button>
+              </div>
+              <div class="ai-input-hint">AI 可自动读取课程 Markdown 资料 · Enter 发送</div>
+            </div>
+
+          </div><!-- /ai-chat-main -->
+        </div><!-- /ai-client-body -->
 
       </div>
     </div><!-- /panel-right -->
@@ -473,6 +481,7 @@
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
-  <script src="course.js?v=19"></script>
+  <script src="strings.js"></script>
+  <script src="course.js?v=20"></script>
 </body>
 </html>

@@ -21,10 +21,17 @@ async function handler(req, res) {
   var courseName = body.courseName || '';
   var subject    = body.subject   || '';
   var msgs       = Array.isArray(body.messages) ? body.messages : [];
+  var lang       = body.lang || 'zh';
+
+  var langNote = {
+    zh: '请用 Markdown 格式回复，使用中文。',
+    en: 'Please respond in English using Markdown format.',
+    es: 'Por favor responde en español usando formato Markdown.'
+  }[lang] || '请用 Markdown 格式回复，使用中文。';
 
   var system = '你是一名专业的考试备考助手，擅长制定科学高效的复习计划，并能根据用户的追问进行深入解答。\n' +
     '课程：' + (courseName || '未命名') + (subject ? ('（' + subject + '）') : '') + '\n' +
-    '请用 Markdown 格式回复，使用中文。';
+    langNote;
 
   try {
     if (provider === 'claude') {

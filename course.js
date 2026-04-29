@@ -1623,19 +1623,122 @@ document.querySelectorAll('.ai-model-btn').forEach(btn => {
   });
 });
 
-// Settings panel toggle
-document.getElementById('aiSettingsToggle').addEventListener('click', () => {
-  const p = document.getElementById('aiSettingsPanel');
-  p.style.display = p.style.display === 'none' ? 'flex' : 'none';
+// ── Multi-session conversation storage ────────────────────────────────────────
+function sessKey()   { return `chatSessions_${courseId}`; }
+function actKey()    { return `chatActive_${courseId}`; }
+function sessLoad()  { return JSON.parse(localStorage.getItem(sessKey()) || '[]'); }
+function sessSave(s) { localStorage.setItem(sessKey(), JSON.stringify(s)); }
+function actGet()    { return localStorage.getItem(actKey()); }
+function actSet(id)  { localStorage.setItem(actKey(), id); }
+
+function sessCreate(hint) {
+  const sessions = sessLoad();
+  const id = 'sess_' + Date.now();
+  const title = hint ? hint.slice(0, 32) + (hint.length > 32 ? '…' : '') : '新对话';
+  sessions.unshift({ id, title, createdAt: Date.now(), messages: [] });
+  sessSave(sessions);
+  actSet(id);
+  return id;
+}
+
+function sessPersist() {
+  const id = actGet(); if (!id) return;
+  const sessions = sessLoad();
+  const s = sessions.find(x => x.id === id); if (!s) return;
+  const firstUser = aiConversation.find(m => m.role === 'user');
+  if (firstUser && s.title === '新对话') {
+    s.title = firstUser.content.slice(0, 32) + (firstUser.content.length > 32 ? '…' : '');
+  }
+  s.messages = aiConversation.slice();
+  sessSave(sessions);
+}
+
+function sessSwitch(id) {
+  sessPersist();
+  const s = sessLoad().find(x => x.id === id); if (!s) return;
+  actSet(id);
+  aiConversation = s.messages.slice();
+  renderSessionMessages();
+  renderHistoryPanel();
+}
+
+function sessDelete(id) {
+  let sessions = sessLoad().filter(x => x.id !== id);
+  sessSave(sessions);
+  if (actGet() === id) {
+    if (sessions.length) sessSwitch(sessions[0].id);
+    else { sessCreate(''); aiConversation = []; renderSessionMessages(); }
+  }
+  renderHistoryPanel();
+}
+
+function renderSessionMessages() {
+  aiChatMessages.innerHTML = '';
+  if (!aiConversation.length) {
+    aiChatMessages.appendChild(buildWelcomeState());
+    return;
+  }
+  for (const msg of aiConversation) {
+    if (msg.role === 'user') {
+      const el = document.createElement('div');
+      el.className = 'chat-msg chat-msg-user';
+      el.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(msg.content)}</div>`;
+      aiChatMessages.appendChild(el);
+    } else {
+      const el = document.createElement('div'); el.className = 'chat-msg chat-msg-assistant';
+      const bubble = document.createElement('div'); bubble.className = 'chat-bubble chat-bubble-ai';
+      bubble.innerHTML = mdToHtml(msg.content); renderMath(bubble);
+      el.appendChild(bubble); aiChatMessages.appendChild(el);
+    }
+  }
+  aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
+}
+
+function renderHistoryPanel() {
+  const sessions = sessLoad(); const activeId = actGet();
+  const list = document.getElementById('aiHistoryList'); if (!list) return;
+  list.innerHTML = '';
+  for (const s of sessions) {
+    const item = document.createElement('div');
+    item.className = 'ai-conv-item' + (s.id === activeId ? ' active' : '');
+    const d = new Date(s.createdAt);
+    const dateStr = d.toLocaleDateString('zh-CN', { month:'numeric', day:'numeric' });
+    item.innerHTML = `<div class="ai-conv-title">${escHtml(s.title)}</div><div class="ai-conv-date">${dateStr}</div><button class="ai-conv-del" title="删除">✕</button>`;
+    item.querySelector('.ai-conv-del').addEventListener('click', e => { e.stopPropagation(); sessDelete(s.id); });
+    item.addEventListener('click', () => { sessSwitch(s.id); });
+    list.appendChild(item);
+  }
+}
+
+// Init sessions on load
+(function initSessions() {
+  let sessions = sessLoad();
+  let activeId = actGet();
+  if (!sessions.length || !sessions.find(s => s.id === activeId)) {
+    if (!sessions.length) { sessCreate(''); activeId = actGet(); sessions = sessLoad(); }
+    else { activeId = sessions[0].id; actSet(activeId); }
+  }
+  const active = sessions.find(s => s.id === activeId);
+  if (active && active.messages.length) {
+    aiConversation = active.messages.slice();
+    renderSessionMessages();
+  }
+})();
+
+// History button toggles sidebar
+document.getElementById('aiBtnHistory').addEventListener('click', () => {
+  const panel = document.getElementById('aiHistoryPanel');
+  const isOpen = panel.classList.toggle('open');
+  if (isOpen) renderHistoryPanel();
 });
 
-// Restart conversation
-document.getElementById('aiBtnRestart').addEventListener('click', () => {
-  if (aiAbortCtrl) { aiAbortCtrl.abort(); aiAbortCtrl = null; }
+// New conversation button
+document.getElementById('aiNewConvBtn').addEventListener('click', () => {
+  sessPersist();
+  sessCreate('');
   aiConversation = [];
-  aiStreaming = false;
-  aiChatMessages.innerHTML = '';
-  aiChatMessages.appendChild(buildWelcomeState());
+  renderSessionMessages();
+  renderHistoryPanel();
 });
 
 // Attach button toggles guide panel
@@ -1865,6 +1968,7 @@ async function sendAIMsg(userContent, displayLabel) {
   document.getElementById('aiChatSend').disabled = true;
 
   aiConversation.push({ role: 'user', content: userContent });
+  sessPersist();
 
   const userEl = document.createElement('div');
   userEl.className = 'chat-msg chat-msg-user';
@@ -1894,6 +1998,7 @@ async function sendAIMsg(userContent, displayLabel) {
         courseName: course.name,
         subject:    course.subject,
         messages:   aiConversation,
+        lang:       localStorage.getItem('app_lang') || 'zh',
       }),
     });
 
@@ -1935,6 +2040,7 @@ async function sendAIMsg(userContent, displayLabel) {
     bubble.innerHTML = mdToHtml(fullText);
     renderMath(bubble);
     aiConversation.push({ role: 'assistant', content: fullText });
+    sessPersist();
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'btn-save-msg';
@@ -2127,6 +2233,7 @@ renderHeader();
 renderChapters();
 renderProgress();
 renderMaterials();
+if (typeof applyStrings === 'function') applyStrings();
 
 // Set accurate layout heights after first render
 requestAnimationFrame(() => {
