@@ -1933,6 +1933,7 @@ async function sendAIMsg(userContent, displayLabel) {
     }
 
     bubble.innerHTML = mdToHtml(fullText);
+    renderMath(bubble);
     aiConversation.push({ role: 'assistant', content: fullText });
 
     const saveBtn = document.createElement('button');
@@ -2095,33 +2096,20 @@ async function saveMdAsMaterial(mdContent, filename) {
   showToast(`已保存 Markdown 资料：${name} ✓`);
 }
 
+const KATEX_OPTS = {
+  delimiters: [
+    { left: '$$', right: '$$', display: true },
+    { left: '$',  right: '$',  display: false },
+  ],
+  throwOnError: false,
+};
+
+function renderMath(el) {
+  if (typeof renderMathInElement === 'function') renderMathInElement(el, KATEX_OPTS);
+}
+
 function mdToHtml(md) {
-  // 1. Protect math blocks before marked touches them (marked would escape LaTeX)
-  const math = [];
-  const safe = md
-    .replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
-      math.push({ tex, block: true });
-      return `@@M${math.length - 1}@@`;
-    })
-    .replace(/\$([^$\n]+?)\$/g, (_, tex) => {
-      math.push({ tex, block: false });
-      return `@@M${math.length - 1}@@`;
-    });
-
-  // 2. Parse Markdown
-  let html = marked.parse(safe, { gfm: true, breaks: false });
-
-  // 3. Restore math with KaTeX rendering
-  html = html.replace(/@@M(\d+)@@/g, (_, i) => {
-    const { tex, block } = math[+i];
-    try {
-      return katex.renderToString(tex, { displayMode: block, throwOnError: false });
-    } catch {
-      return `<code>${block ? '$$' + tex + '$$' : '$' + tex + '$'}</code>`;
-    }
-  });
-
-  return html;
+  return marked.parse(md, { gfm: true });
 }
 
 // ── Layout height vars ────────────────────────────────────────────────────────
