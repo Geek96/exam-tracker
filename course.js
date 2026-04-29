@@ -1666,8 +1666,8 @@ async function loadMarkdownContext() {
     if (!mds.length) return '';
     const fileList = mds.map(f => f.name).join('、');
     const header = `以下是课程「${escHtml(course.name)}」的课程资料文件，请在回答时优先参考相关文件内容（可用文件：${fileList}）：\n\n`;
-    const PER_FILE = 500000;
-    const TOTAL_CAP = 1200000;
+    const PER_FILE = 120000;
+    const TOTAL_CAP = 300000;
     let total = 0;
     const bodies = [];
     for (const f of mds) {
