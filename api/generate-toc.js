@@ -5,9 +5,10 @@
 // Model chain with per-model API version
 // gemini-1.5-flash only exists on v1, not v1beta
 const MODELS = [
-  { id: 'gemini-2.5-flash',     api: 'v1beta' },
-  { id: 'gemini-2.0-flash-lite', api: 'v1beta' },
-  { id: 'gemini-1.5-flash',     api: 'v1'    },
+  { id: 'gemini-3-flash-preview', api: 'v1beta' },
+  { id: 'gemini-2.5-flash',       api: 'v1beta' },
+  { id: 'gemini-2.0-flash-lite',  api: 'v1beta' },
+  { id: 'gemini-1.5-flash',       api: 'v1'     },
 ];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
