@@ -1362,6 +1362,8 @@
   margin-bottom: 10px; flex-shrink: 0;
 }
 .materials-title-sm { font-size: 13px; font-weight: 700; flex: 1; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+.materials-html-btn { color: var(--holo-cyan); border-color: rgba(0,229,255,0.3); font-family: monospace; font-size: 11px; letter-spacing: 0; }
+.materials-html-btn:hover { background: rgba(0,229,255,0.08); border-color: rgba(0,229,255,0.55); }
 
 .materials-drop-inline {
   flex: 1;

@@ -89,6 +89,8 @@
             <label class="btn-sm accent materials-upload-btn" for="materialFileInput">+ 上传</label>
             <input type="file" id="materialFileInput" multiple
               accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp" style="display:none" />
+            <label class="btn-sm materials-upload-btn materials-html-btn" for="materialHtmlInput" title="上传 HTML 文件，通过 MinerU 转换为 Markdown">⟨/⟩ HTML</label>
+            <input type="file" id="materialHtmlInput" multiple accept=".html,.htm" style="display:none" />
           </div>
           <div class="materials-drop-zone materials-drop-inline" id="materialsDropZone">
             <div class="materials-grid-inline" id="materialsGrid"></div>
@@ -466,6 +468,6 @@
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="course.js?v=5"></script>
+  <script src="course.js?v=6"></script>
 </body>
 </html>

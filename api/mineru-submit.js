@@ -22,25 +22,29 @@ async function handler(req, res) {
     } catch { res.status(400).json({ error: '请求格式无效' }); return; }
   }
 
-  const { pdfBase64, filename = 'upload.pdf' } = body;
+  const { pdfBase64, filename = 'upload.pdf', fileType = 'pdf' } = body;
   if (!pdfBase64) { res.status(400).json({ error: '缺少 pdfBase64 字段' }); return; }
+
+  const isHtml = fileType === 'html';
+  const mimeType    = isHtml ? 'text/html'        : 'application/pdf';
+  const modelVersion = isHtml ? 'MinerU-HTML'     : 'pipeline';
 
   let pdfBuf;
   try { pdfBuf = Buffer.from(pdfBase64, 'base64'); }
   catch { res.status(400).json({ error: 'base64 解码失败' }); return; }
 
   if (pdfBuf.length > 3.5 * 1024 * 1024) {
-    res.status(413).json({ error: `PDF 文件过大（${(pdfBuf.length / 1024 / 1024).toFixed(1)}MB），AI 提取仅支持 3.5MB 以内的文件` });
+    res.status(413).json({ error: `文件过大（${(pdfBuf.length / 1024 / 1024).toFixed(1)}MB），AI 提取仅支持 3.5MB 以内的文件` });
     return;
   }
 
   // Build safe filename
-  const safeFilename = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_').slice(0, 100) || 'upload.pdf';
+  const safeFilename = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_').slice(0, 100) || (isHtml ? 'upload.html' : 'upload.pdf');
 
   // Upload to tmpfiles.org via multipart form
   const boundary = '----MinerUBound' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const headerPart = Buffer.from(
-    `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${safeFilename}"\r\nContent-Type: application/pdf\r\n\r\n`
+    `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${safeFilename}"\r\nContent-Type: ${mimeType}\r\n\r\n`
   );
   const footerPart = Buffer.from(`\r\n--${boundary}--\r\n`);
   const formBody = Buffer.concat([headerPart, pdfBuf, footerPart]);
@@ -73,7 +77,7 @@ async function handler(req, res) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({ url: pdfUrl, model_version: 'pipeline' }),
+      body: JSON.stringify({ url: pdfUrl, model_version: modelVersion }),
       signal: AbortSignal.timeout(20000),
     });
     const minData = await minRes.json();

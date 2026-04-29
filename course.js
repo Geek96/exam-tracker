@@ -1396,12 +1396,14 @@ async function uploadMaterialFiles(fileList) {
   // PDFs: convert to Markdown via MinerU (background)
   for (const file of pdfs) {
     showToast(`📄 ${file.name} → 正在转换为 Markdown…`);
-    startMaterialMineruJob(file);
+    startMaterialMineruJob(file, 'pdf');
   }
 }
 
-async function startMaterialMineruJob(file) {
-  const baseName = file.name.replace(/\.pdf$/i, '');
+async function startMaterialMineruJob(file, fileType) {
+  const isHtml = fileType === 'html';
+  const ext    = isHtml ? /\.html?$/i : /\.pdf$/i;
+  const baseName = file.name.replace(ext, '');
   const jobId = mjCreate(baseName + ' → MD', 'material');
 
   try {
@@ -1412,7 +1414,7 @@ async function startMaterialMineruJob(file) {
     const res = await fetch('/api/mineru-submit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pdfBase64, filename: file.name }),
+      body: JSON.stringify({ pdfBase64, filename: file.name, fileType: fileType || 'pdf' }),
     });
     const d = await res.json();
     if (!res.ok || d.error) throw new Error(d.error || `HTTP ${res.status}`);
@@ -1455,11 +1457,21 @@ async function startMaterialMineruJob(file) {
   }
 }
 
-// File input
+// File input (general)
 document.getElementById('materialFileInput').addEventListener('change', async e => {
   const files = Array.from(e.target.files);
   e.target.value = '';
   if (files.length) await uploadMaterialFiles(files);
+});
+
+// HTML file input → MinerU-HTML model
+document.getElementById('materialHtmlInput').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  e.target.value = '';
+  for (const file of files) {
+    showToast(`⟨/⟩ ${file.name} → 正在转换为 Markdown…`);
+    startMaterialMineruJob(file, 'html');
+  }
 });
 
 // Drag-and-drop onto materials zone
@@ -1469,8 +1481,14 @@ matDropZone.addEventListener('dragleave', () => matDropZone.classList.remove('dr
 matDropZone.addEventListener('drop', async e => {
   e.preventDefault();
   matDropZone.classList.remove('drag-over');
-  const files = Array.from(e.dataTransfer.files);
-  if (files.length) await uploadMaterialFiles(files);
+  const all = Array.from(e.dataTransfer.files);
+  const htmlFiles = all.filter(f => /\.html?$/i.test(f.name));
+  const rest      = all.filter(f => !/\.html?$/i.test(f.name));
+  for (const file of htmlFiles) {
+    showToast(`⟨/⟩ ${file.name} → 正在转换为 Markdown…`);
+    startMaterialMineruJob(file, 'html');
+  }
+  if (rest.length) await uploadMaterialFiles(rest);
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
