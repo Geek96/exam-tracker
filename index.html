@@ -49,20 +49,16 @@
     <!-- Course grid -->
     <div class="course-grid" id="courseGrid"></div>
 
-    <!-- ── Exam Section ── -->
-    <section class="exam-section">
+    <!-- ── Upcoming Exams ── -->
+    <section class="upcoming-exams-section">
       <div class="section-row">
-        <h2 class="section-title" data-i18n="myExams">我的考试</h2>
-        <button class="btn-add" id="btnAddExam">
-          <span class="btn-add-icon">+</span> <span data-i18n="addExam">添加考试</span>
-        </button>
+        <h2 class="section-title" data-i18n="upcomingExams">临近考试</h2>
       </div>
-      <div class="exam-empty" id="examEmpty">
+      <div class="upcoming-exams-empty" id="upcomingExamsEmpty" style="display:none">
         <div class="empty-icon">📅</div>
-        <p class="empty-title" data-i18n="noExamsTitle">暂无考试安排</p>
-        <p class="empty-sub" data-i18n="noExamsHint">点击「添加考试」新增一场考试</p>
+        <p class="empty-title" data-i18n="noUpcomingExams">各课程还没有添加考试</p>
       </div>
-      <div class="exam-list" id="examList"></div>
+      <div class="upcoming-exams-list" id="upcomingExamsList"></div>
     </section>
 
   </main>
@@ -97,38 +93,6 @@
         <div class="form-actions">
           <button type="button" class="btn-cancel" id="btnCancel" data-i18n="cancel">取消</button>
           <button type="submit" class="btn-submit" data-i18n="addCourseBtn">添加课程</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Add Exam Modal -->
-  <div class="modal-overlay" id="examModalOverlay">
-    <div class="modal" id="examModal">
-      <div class="modal-header">
-        <h3 class="modal-title" data-i18n="addExamTitle">添加新考试</h3>
-        <button class="modal-close" id="examModalClose">✕</button>
-      </div>
-      <form class="modal-form" id="examForm">
-        <label class="form-label"><span data-i18n="examName">考试名称</span> <span class="required">*</span></label>
-        <input class="form-input" type="text" id="examInputName" data-i18n-ph="examNamePh" placeholder="例：期末数学考试" maxlength="60" required />
-
-        <label class="form-label"><span data-i18n="examDate">考试日期</span> <span class="required">*</span></label>
-        <input class="form-input" type="date" id="examInputDate" required />
-
-        <label class="form-label" data-i18n="examType">考试类型</label>
-        <div class="exam-type-group" id="examTypeGroup">
-          <button type="button" class="exam-type-btn selected" data-type="final" data-i18n="examTypeFinal">期末考</button>
-          <button type="button" class="exam-type-btn" data-type="midterm" data-i18n="examTypeMidterm">期中测验</button>
-          <button type="button" class="exam-type-btn" data-type="quiz" data-i18n="examTypeQuiz">小测</button>
-          <button type="button" class="exam-type-btn" data-type="opening" data-i18n="examTypeOpening">开学测验</button>
-          <button type="button" class="exam-type-btn" data-type="credit" data-i18n="examTypeCredit">学分考</button>
-          <button type="button" class="exam-type-btn" data-type="other" data-i18n="examTypeOther">其他</button>
-        </div>
-
-        <div class="form-actions">
-          <button type="button" class="btn-cancel" id="examBtnCancel" data-i18n="cancel">取消</button>
-          <button type="submit" class="btn-submit" data-i18n="addExam">添加考试</button>
         </div>
       </form>
     </div>

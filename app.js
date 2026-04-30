@@ -284,10 +284,7 @@ function saveExams(exams) {
   }
 }
 
-let exams = loadExams();
-let selectedExamType = 'final';
-
-const EXAM_TYPE_KEYS = {
+const EXAM_TYPE_KEYS_HOME = {
   opening: 'examTypeOpening',
   midterm: 'examTypeMidterm',
   final: 'examTypeFinal',
@@ -307,15 +304,32 @@ function examDaysBadge(dateStr) {
   return `<span class="exam-item-days">${label}</span>`;
 }
 
-function renderExams() {
-  const list = document.getElementById('examList');
-  const empty = document.getElementById('examEmpty');
-  if (!list || !empty) return;
-  list.innerHTML = '';
+function renderUpcomingExams() {
+  const wrap  = document.getElementById('upcomingExamsList');
+  const empty = document.getElementById('upcomingExamsEmpty');
+  if (!wrap || !empty) return;
 
-  const sorted = [...exams].sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
+  const allExams = loadExams();
+  const now = Date.now();
+  const byCourseBest = new Map();
 
-  if (sorted.length === 0) {
+  for (const exam of allExams) {
+    const ms = new Date(exam.examDate).getTime();
+    const existing = byCourseBest.get(exam.courseId);
+    if (!existing) { byCourseBest.set(exam.courseId, exam); continue; }
+    const exMs = new Date(existing.examDate).getTime();
+    const isFuture = ms >= now;
+    const exIsFuture = exMs >= now;
+    if (isFuture && !exIsFuture) byCourseBest.set(exam.courseId, exam);
+    else if (isFuture && exIsFuture && ms < exMs) byCourseBest.set(exam.courseId, exam);
+    else if (!isFuture && !exIsFuture && ms > exMs) byCourseBest.set(exam.courseId, exam);
+  }
+
+  const upcoming = [...byCourseBest.values()]
+    .sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
+
+  wrap.innerHTML = '';
+  if (upcoming.length === 0) {
     empty.style.display = 'block';
     return;
   }
@@ -324,91 +338,35 @@ function renderExams() {
   const lang = localStorage.getItem('app_lang') || 'zh';
   const locale = lang === 'zh' ? 'zh-CN' : lang === 'es' ? 'es-ES' : 'en-US';
 
-  sorted.forEach(exam => {
-    const item = document.createElement('div');
-    item.className = 'exam-item';
+  upcoming.forEach(exam => {
+    const course = courses.find(c => c.id === exam.courseId);
+    const courseName = course ? course.name : window.t('unknownCourse');
+    const typeLabel = window.t(EXAM_TYPE_KEYS_HOME[exam.type] || 'examTypeOther');
     const dateStr = exam.examDate
-      ? new Date(exam.examDate).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
-      : '—';
-    const typeLabel = window.t(EXAM_TYPE_KEYS[exam.type] || 'examTypeOther');
+      ? new Date(exam.examDate).toLocaleDateString(locale, { month: 'long', day: 'numeric' })
+      : '-';
+
+    const item = document.createElement('div');
+    item.className = 'upcoming-exam-item';
+    item.style.setProperty('--item-color', course ? course.color : 'var(--accent)');
     item.innerHTML = `
-      <div class="exam-item-info">
-        <div class="exam-item-name">${escHtml(exam.name)}</div>
-        <div class="exam-item-meta">
-          <span class="exam-type-badge ${exam.type}">${typeLabel}</span>
-          <span>📅 ${dateStr}</span>
-          ${examDaysBadge(exam.examDate)}
-        </div>
+      <div class="upcoming-exam-course">${escHtml(courseName)}</div>
+      <div class="upcoming-exam-info">
+        <span class="upcoming-exam-name">${escHtml(exam.name)}</span>
+        <span class="exam-type-badge ${exam.type}">${typeLabel}</span>
+        <span class="upcoming-exam-date">📅 ${dateStr}</span>
+        ${examDaysBadge(exam.examDate)}
       </div>
-      <button class="exam-del-btn" title="${window.t('deleteExam')}">✕</button>
     `;
-    item.querySelector('.exam-del-btn').addEventListener('click', (e) => {
-      e.stopPropagation();
-      exams = exams.filter(x => x.id !== exam.id);
-      saveExams(exams);
-      renderExams();
-      showToast(window.t('examDeleted'));
-    });
-    list.appendChild(item);
+    if (course) item.addEventListener('click', () => { window.location.href = `course.html?id=${course.id}`; });
+    wrap.appendChild(item);
   });
 }
-
-const examModalOverlay = document.getElementById('examModalOverlay');
-const examForm = document.getElementById('examForm');
-
-function openExamModal() {
-  examForm.reset();
-  selectedExamType = 'final';
-  document.querySelectorAll('.exam-type-btn').forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.type === selectedExamType);
-  });
-  examModalOverlay.classList.add('open');
-  document.getElementById('examInputName').focus();
-}
-
-function closeExamModal() {
-  examModalOverlay.classList.remove('open');
-}
-
-document.getElementById('btnAddExam').addEventListener('click', openExamModal);
-document.getElementById('examModalClose').addEventListener('click', closeExamModal);
-document.getElementById('examBtnCancel').addEventListener('click', closeExamModal);
-examModalOverlay.addEventListener('click', (e) => {
-  if (e.target === examModalOverlay) closeExamModal();
-});
-
-document.getElementById('examTypeGroup').addEventListener('click', (e) => {
-  const btn = e.target.closest('.exam-type-btn');
-  if (!btn) return;
-  document.querySelectorAll('.exam-type-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected');
-  selectedExamType = btn.dataset.type;
-});
-
-examForm.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const name = document.getElementById('examInputName').value.trim();
-  const date = document.getElementById('examInputDate').value;
-  if (!name) { showToast(window.t('examNameRequired')); return; }
-  if (!date) { showToast(window.t('examDateRequired')); return; }
-
-  exams.unshift({
-    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-    name,
-    examDate: date,
-    type: selectedExamType,
-    createdAt: Date.now(),
-  });
-  saveExams(exams);
-  renderExams();
-  closeExamModal();
-  showToast(window.t('examAdded'));
-});
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 
 function escHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // ── Language switcher ─────────────────────────────────────────────────────────
@@ -426,7 +384,7 @@ function initLangSwitcher() {
       document.querySelectorAll('.lang-sw-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === btn.dataset.lang));
       if (typeof applyStrings === 'function') applyStrings();
       render();
-      renderExams();
+      renderUpcomingExams();
     });
   });
 }
@@ -435,5 +393,5 @@ function initLangSwitcher() {
 
 render();
 if (typeof applyStrings === 'function') applyStrings();
-renderExams();
+renderUpcomingExams();
 initLangSwitcher();

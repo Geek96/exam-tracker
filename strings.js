@@ -121,6 +121,9 @@ var STRINGS = {
     examDateRequired: '请填写考试日期', examNameRequired: '请填写考试名称',
     examCount: '{n} 场考试',
     myExams: '我的考试',
+    upcomingExams: '临近考试',
+    noUpcomingExams: '各课程还没有添加考试',
+    unknownCourse: '未知课程',
   },
   en: {
     appName: 'Course & Exam Manager', pageTitle: 'Course & Exam Manager',
@@ -243,6 +246,9 @@ var STRINGS = {
     examDateRequired: 'Please enter the exam date', examNameRequired: 'Please enter an exam name',
     examCount: '{n} exam(s)',
     myExams: 'My Exams',
+    upcomingExams: 'Upcoming Exams',
+    noUpcomingExams: 'No exams added to any course yet',
+    unknownCourse: 'Unknown Course',
   },
   es: {
     appName: 'Gestor de Cursos y Exámenes', pageTitle: 'Gestor de Cursos y Exámenes',
@@ -365,6 +371,9 @@ var STRINGS = {
     examDateRequired: 'Por favor ingresa la fecha del examen', examNameRequired: 'Por favor ingresa el nombre del examen',
     examCount: '{n} examen(es)',
     myExams: 'Mis Exámenes',
+    upcomingExams: 'Próximos Exámenes',
+    noUpcomingExams: 'Aún no se han añadido exámenes a ningún curso',
+    unknownCourse: 'Curso desconocido',
   }
 };
 

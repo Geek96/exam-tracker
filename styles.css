@@ -667,3 +667,45 @@ body::after {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Upcoming Exam Reminders (index.html) ─────────────────────────────── */
+.upcoming-exams-section { margin-top: 2rem; }
+
+.upcoming-exams-empty {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--muted);
+}
+
+.upcoming-exam-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1.1rem;
+  background: var(--card);
+  border-radius: 10px;
+  border-left: 3px solid var(--item-color, var(--accent));
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.upcoming-exam-item:hover { background: rgba(255,255,255,0.06); }
+
+.upcoming-exam-course {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--item-color, var(--accent));
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.upcoming-exam-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+}
+
+.upcoming-exam-name { font-weight: 600; color: var(--text); }
+.upcoming-exam-date { color: var(--muted); font-size: 0.85rem; }

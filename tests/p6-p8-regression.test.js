@@ -83,3 +83,27 @@ test('Task1 AI sessions stored in IndexedDB not localStorage', () => {
   // version bump
   assert.match(read('course.html'), /course\.js\?v=32/);
 });
+
+test('Task2 main page shows upcoming exam reminders not CRUD', () => {
+  const html = read('index.html');
+  const js   = read('app.js');
+  const css  = read('styles.css');
+
+  // New widget HTML exists
+  assert.match(html, /id="upcomingExamsList"/);
+  assert.match(html, /id="upcomingExamsEmpty"/);
+
+  // Old exam CRUD modal removed
+  assert.doesNotMatch(html, /id="examModalOverlay"/);
+  assert.doesNotMatch(html, /id="btnAddExam"/);
+
+  // New render function in app.js
+  assert.match(js, /function renderUpcomingExams\(\)/);
+
+  // Old exam CRUD functions removed from app.js
+  assert.doesNotMatch(js, /function renderExams\(\)/);
+  assert.doesNotMatch(js, /function openExamModal\(\)/);
+
+  // New styles exist
+  assert.match(css, /\.upcoming-exam-item/);
+});
