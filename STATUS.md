@@ -3,7 +3,7 @@
 > 📍 本文件是项目的实时状态快照。每次重要变更后更新。  
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
-**最后更新**: 2026-04-29  
+**最后更新**: 2026-04-30  
 **当前版本**: `course.js?v=27`
 **部署状态**: ✅ 生产环境正常（Vercel）
 
@@ -63,12 +63,15 @@ ad0c088  fix: add 0x0.st fallback for PDF upload (litterbox 504 timeout)
 
 ## TASKS:
 
-> 计划文件：`docs/superpowers/plans/2026-04-29-p5-p8-features.md`
-> 版本路线：v22 → v23（P5）→ v24（P6）→ v25（P7）→ v26（P8a）→ v27（P8b）
+> 计划文件：`docs/superpowers/plans/2026-04-30-p6-p7-p8-fixes-and-features.md`
+> 版本路线：v27（当前）→ v28（P6 bug fix）→ v29（P7 UI）→ P8（index.html/app.js，不影响 course.js 版本号）
 
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | v=23 | `api/study-plan.js` + course.html model toggle |
+| P6（新）| AI 对话数据腐坏 & 系统提示词显示 | ⬜ 待实现 | v=28 | `course.js` sessPersist + display 字段 + sessSave 异常捕获 |
+| P7（新）| AI 文件选择 UI 重设计 & 加载中清理 | ⬜ 待实现 | v=29 | `course.js` 下拉式文件选择器，移除 🤖 按钮 |
+| P8（新）| 应用改名 + 简化课程表单 + 考试管理模块 | ⬜ 待实现 | — | `index.html` `app.js` `strings.js` `styles.css` |
 
 ### 已验收完成
 
