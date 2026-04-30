@@ -4,6 +4,24 @@
 
 ## 2026-04-30
 
+**操作者**: Claude Sonnet 4.6
+
+**涉及文件**: `ROADMAP.md`, `STATUS.md`, `docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md`
+
+**完成内容**:
+- 读取并 commit 了用户新增的 3 条 P6 backlog 条目（ROADMAP.md）
+- 深度分析 3 个新问题的根因与实现路径：
+  1. **Task1（v=32）** — localStorage 溢出导致文件/历史消失：根因是 `chatSessions_*` 占用大量 localStorage 配额，修复方案为将 AI 对话 session 迁移至 IndexedDB（新建 `chatSessions` object store，IDB version 1→2），彻底释放 localStorage 空间。
+  2. **Task2** — 主界面考试模块改为临近考试提醒：移除 `index.html` 考试 CRUD，替换为只读"临近考试"widget，每门课程取最近一次考试，按时间升序排列，点击跳转课程页。
+  3. **Task3（v=33）** — MinerU 任务离开页面即中断：持久化 `taskId` 至 localStorage，页面返回时通过 `resumePendingMinerUTasks()` 自动续传轮询。
+- 编写完整实现计划（含失败测试→实现→通过测试→commit 的 TDD 步骤），保存至 `docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md`。
+- 更新 `STATUS.md` TASKS 板块，新增 Task1/2/3 待实现条目与版本路线。
+
+**下一步**:
+- 执行计划 Task1 → Task2 → Task3（可用 subagent-driven-development 或 executing-plans 执行）
+
+---
+
 **操作者**: Codex (GPT-5)
 
 **涉及文件**: `course.js`, `course.html`, `course.css`, `app.js`, `welcome.html`, `strings.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`, `tests/p6-p8-regression.test.js`
