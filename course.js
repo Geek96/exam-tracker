@@ -1447,10 +1447,19 @@ let _idb = null;
 function getDB() {
   if (_idb) return Promise.resolve(_idb);
   return new Promise((res, rej) => {
-    const req = indexedDB.open('examTrackerFiles', 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore('files', { keyPath: 'id' });
+    const req = indexedDB.open('examTrackerFiles', 2);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('files')) {
+        db.createObjectStore('files', { keyPath: 'id' });
+      }
+      if (!db.objectStoreNames.contains('chatSessions')) {
+        db.createObjectStore('chatSessions', { keyPath: 'courseId' });
+      }
+    };
     req.onsuccess = e => { _idb = e.target.result; res(_idb); };
     req.onerror = () => rej(req.error);
+    req.onblocked = () => rej(new Error('IDB upgrade blocked'));
   });
 }
 async function dbSave(record) {
@@ -1475,6 +1484,26 @@ async function dbDelete(id) {
   return new Promise((res, rej) => {
     const tx = db.transaction('files', 'readwrite');
     tx.objectStore('files').delete(id);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function dbGetSessions(cid) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const req = db.transaction('chatSessions', 'readonly')
+      .objectStore('chatSessions').get(cid);
+    req.onsuccess = () => res(req.result ? req.result.sessions : []);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbSaveSessions(cid, sessions) {
+  const db = await getDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('chatSessions', 'readwrite');
+    tx.objectStore('chatSessions').put({ courseId: cid, sessions });
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
@@ -1726,26 +1755,15 @@ document.querySelectorAll('.ai-model-btn').forEach(btn => {
   });
 });
 
-// ── Multi-session conversation storage ────────────────────────────────────────
-function sessKey()   { return `chatSessions_${courseId}`; }
+// ── Multi-session conversation storage (IndexedDB) ────────────────────────────
+let _sessCache = [];
 function actKey()    { return `chatActive_${courseId}`; }
-function sessLoad()  { return JSON.parse(localStorage.getItem(sessKey()) || '[]'); }
+function sessLoad()  { return _sessCache; }
 function sessSave(s) {
-  try {
-    localStorage.setItem(sessKey(), JSON.stringify(s));
-  } catch {
-    try {
-      const trimmed = s.slice(0, 3).map(sess => ({
-        ...sess,
-        messages: sess.messages.slice(-8).map(m => ({
-          role: m.role,
-          content: (m.display || m.content || '').slice(0, 500),
-          display: m.display,
-        })),
-      }));
-      localStorage.setItem(sessKey(), JSON.stringify(trimmed));
-    } catch {}
-  }
+  _sessCache = s;
+  dbSaveSessions(courseId, s).catch(e =>
+    console.warn('[ExamTracker] sessSave IDB failed', e)
+  );
 }
 function actGet()    { return localStorage.getItem(actKey()); }
 function actSet(id)  {
@@ -1839,8 +1857,20 @@ function renderHistoryPanel() {
   }
 }
 
-// Init sessions on load
-(function initSessions() {
+// Init sessions (async: loads from IndexedDB, migrates from localStorage if needed)
+async function initSessions() {
+  const lsKey = 'chatSessions_' + courseId;
+  const lsRaw = localStorage.getItem(lsKey);
+  if (lsRaw) {
+    try {
+      _sessCache = JSON.parse(lsRaw) || [];
+      await dbSaveSessions(courseId, _sessCache);
+      localStorage.removeItem(lsKey);
+    } catch {}
+  } else {
+    _sessCache = await dbGetSessions(courseId).catch(() => []);
+  }
+
   let sessions = sessLoad();
   let activeId = actGet();
   if (!sessions.length || !sessions.find(s => s.id === activeId)) {
@@ -1852,7 +1882,7 @@ function renderHistoryPanel() {
     aiConversation = active.messages.slice();
     renderSessionMessages();
   }
-})();
+}
 
 // History button toggles sidebar
 document.getElementById('aiBtnHistory').addEventListener('click', () => {
@@ -2575,6 +2605,7 @@ renderChapters();
 renderProgress();
 renderMaterials();
 updateExamNavCard();
+initSessions().catch(e => console.warn('[ExamTracker] initSessions failed', e));
 if (typeof applyStrings === 'function') applyStrings();
 
 // Set accurate layout heights after first render

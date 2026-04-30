@@ -47,8 +47,39 @@ test('P8 integrates a course-specific exam panel', () => {
   assert.match(html, /id="examNavCard"/);
   assert.match(html, /id="panelExams"/);
   assert.match(html, /id="courseExamModalOverlay"/);
-  assert.match(html, /course\.js\?v=31/);
+  assert.match(html, /course\.js\?v=\d+/);
 
   assert.match(css, /\.exam-panel-item/);
   assert.equal((strings.match(/examCount:/g) || []).length, 3);
+});
+
+test('Task1 AI sessions stored in IndexedDB not localStorage', () => {
+  const src = read('course.js');
+
+  // IDB version 2 with chatSessions store
+  assert.match(src, /indexedDB\.open\('examTrackerFiles',\s*2\)/);
+  assert.match(src, /createObjectStore\('chatSessions'/);
+
+  // IDB session helpers exist
+  assert.match(src, /async function dbGetSessions\(cid\)/);
+  assert.match(src, /async function dbSaveSessions\(cid,\s*sessions\)/);
+
+  // Session cache variable
+  assert.match(src, /let _sessCache\s*=\s*\[\]/);
+
+  // sessLoad returns cache
+  assert.match(src, /function sessLoad\(\)\s*\{\s*return _sessCache;\s*\}/);
+
+  // sessSave updates cache and writes to IDB asynchronously
+  assert.match(src, /_sessCache\s*=\s*s/);
+  assert.match(src, /dbSaveSessions\(courseId,\s*s\)/);
+
+  // initSessions is an async function (not an IIFE)
+  assert.match(src, /async function initSessions\(\)/);
+
+  // localStorage sessKey usage removed
+  assert.doesNotMatch(src, /chatSessions_\$\{courseId\}/);
+
+  // version bump
+  assert.match(read('course.html'), /course\.js\?v=32/);
 });

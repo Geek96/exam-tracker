@@ -128,3 +128,9 @@
 - IndexedDB 课程资料存储
 - MinerU PDF/HTML → Markdown 转换
 - Vercel 部署配置
+## 2026-04-30
+
+**操作者**: Codex (GPT-5)
+
+- Task1: Migrated AI chat sessions from `localStorage` to IndexedDB `chatSessions` store and added one-time legacy session migration.
+- Updated `course.js` cache version to `v=32` and added regression coverage for the IDB session storage path.
