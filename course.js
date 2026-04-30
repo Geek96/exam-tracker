@@ -1499,6 +1499,32 @@ function getDB() {
     req.onerror = () => rej(req.error);
   });
 }
+async function getDBWithStores(storeNames) {
+  let db = await getDB();
+  const missing = storeNames.filter(name => !db.objectStoreNames.contains(name));
+  if (!missing.length) return db;
+  db.close();
+  _idb = null;
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('examTrackerFiles', db.version + 1);
+    req.onupgradeneeded = e => {
+      const upgradeDb = e.target.result;
+      if (!upgradeDb.objectStoreNames.contains('files')) {
+        upgradeDb.createObjectStore('files', { keyPath: 'id' });
+      }
+      if (!upgradeDb.objectStoreNames.contains('materialChunks')) {
+        upgradeDb.createObjectStore('materialChunks', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => {
+      _idb = e.target.result;
+      _idb.onversionchange = () => _idb.close();
+      res(_idb);
+    };
+    req.onerror = () => rej(req.error);
+    req.onblocked = () => rej(new Error('IDB materialChunks upgrade blocked'));
+  });
+}
 async function dbSave(record) {
   const db = await getDB();
   return new Promise((res, rej) => {
@@ -1521,6 +1547,46 @@ async function dbDelete(id) {
   return new Promise((res, rej) => {
     const tx = db.transaction('files', 'readwrite');
     tx.objectStore('files').delete(id);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function dbSaveChunksForFile(fileId, chunks) {
+  const db = await getDBWithStores(['materialChunks']);
+  return new Promise((res, rej) => {
+    const tx = db.transaction('materialChunks', 'readwrite');
+    const store = tx.objectStore('materialChunks');
+    const idxReq = store.getAll();
+    idxReq.onsuccess = () => {
+      for (const chunk of idxReq.result.filter(c => c.fileId === fileId)) store.delete(chunk.id);
+      for (const chunk of chunks) store.put(chunk);
+    };
+    idxReq.onerror = () => rej(idxReq.error);
+    tx.oncomplete = res;
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
+async function dbGetChunksForCourse(cid) {
+  const db = await getDBWithStores(['materialChunks']);
+  return new Promise((res, rej) => {
+    const req = db.transaction('materialChunks', 'readonly').objectStore('materialChunks').getAll();
+    req.onsuccess = () => res(req.result.filter(c => c.courseId === cid));
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbDeleteChunksForFile(fileId) {
+  const db = await getDBWithStores(['materialChunks']);
+  return new Promise((res, rej) => {
+    const tx = db.transaction('materialChunks', 'readwrite');
+    const store = tx.objectStore('materialChunks');
+    const req = store.getAll();
+    req.onsuccess = () => {
+      for (const chunk of req.result.filter(c => c.fileId === fileId)) store.delete(chunk.id);
+    };
+    req.onerror = () => rej(req.error);
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
@@ -1607,6 +1673,22 @@ function saveFileSelection(sel) {
 }
 let selectedFiles = loadFileSelection();
 
+async function ensureChunksForMaterial(f) {
+  if (!window.MaterialRAG) return;
+  const isMarkdown = (f.name || '').toLowerCase().endsWith('.md') || f.type === 'text/markdown';
+  if (!isMarkdown || !f.data) return;
+  const existing = await dbGetChunksForCourse(courseId).catch(() => []);
+  if (existing.some(c => c.fileId === f.id)) return;
+  const text = new TextDecoder().decode(f.data);
+  const chunks = MaterialRAG.chunkMarkdownMaterial({
+    fileId: f.id,
+    courseId,
+    fileName: f.name,
+    text,
+  });
+  await dbSaveChunksForFile(f.id, chunks);
+}
+
 async function renderMaterials() {
   const all   = await dbGetAll();
   const files = all.filter(f => f.courseId === courseId);
@@ -1667,6 +1749,7 @@ async function renderMaterials() {
       }
       clearTimeout(disarmTimer);
       await dbDelete(f.id);
+      await dbDeleteChunksForFile(f.id);
       selectedFiles.delete(f.id);
       saveFileSelection(selectedFiles);
       await renderMaterials();
@@ -1675,6 +1758,7 @@ async function renderMaterials() {
     grid.appendChild(card);
   });
 
+  files.forEach(f => ensureChunksForMaterial(f).catch(e => console.warn('[ExamTracker] material chunking failed', e)));
   refreshContextBadge();
 }
 
@@ -2509,11 +2593,13 @@ document.getElementById('renameInput').addEventListener('keydown', e => {
 async function saveMdAsMaterial(mdContent, filename) {
   const name = filename || `MinerU_${Date.now()}.md`;
   const data = new TextEncoder().encode(mdContent).buffer;
-  await dbSave({
+  const record = {
     id: `mat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
     courseId, name, type: 'text/markdown',
     size: data.byteLength, data, addedAt: new Date().toISOString(),
-  });
+  };
+  await dbSave(record);
+  await ensureChunksForMaterial(record);
   await renderMaterials();
   showToast(window.tf('savedMdFile', { name }));
 }

@@ -139,3 +139,15 @@ test('Navigation storage fix avoids blocking the materials database upgrade path
 
   assert.match(read('course.html'), /course\.js\?v=34/);
 });
+
+test('Material chunks are persisted and deleted with source materials', () => {
+  const src = read('course.js');
+
+  assert.match(src, /createObjectStore\('materialChunks'/);
+  assert.match(src, /async function dbSaveChunksForFile\(fileId,\s*chunks\)/);
+  assert.match(src, /async function dbGetChunksForCourse\(cid\)/);
+  assert.match(src, /async function dbDeleteChunksForFile\(fileId\)/);
+  assert.match(src, /async function ensureChunksForMaterial\(f\)/);
+  assert.match(src, /await dbDeleteChunksForFile\(f\.id\)/);
+  assert.match(src, /MaterialRAG\.chunkMarkdownMaterial/);
+});
