@@ -47,7 +47,7 @@
 ```
 
 **规则**：每次修改 `course.js` 后，必须同步递增 `course.html` 中的 `?v=N`。  
-当前版本：`v=31`，下一批次目标：`v=32`（Task1）→ `v=33`（Task3）。
+当前版本：`v=34`。
 
 ---
 
@@ -74,8 +74,9 @@
 
 | 存储类型 | 用途 | 键名示例 |
 |---|---|---|
-| `localStorage` | 课程元数据、进度、会话 ID | `examTrackerCourses`, `chatSessions_<id>`, `chatActive_<id>`, `app_lang` |
-| `IndexedDB`（`courseFiles` 数据库）| 课程资料文件（PDF/Markdown/图片）| 通过 `dbGet/dbSave/dbDelete` 函数操作 |
+| `localStorage` | 课程元数据、进度、短 ID、语言、MinerU 待续传任务 | `examTrackerCourses`, `examTrackerExams`, `chatActive_<id>`, `app_lang`, `pendingMinerU_<id>` |
+| `IndexedDB`（`examTrackerFiles` 数据库）| 课程资料文件（PDF/Markdown/图片）| 通过 `dbGet/dbSave/dbDelete` 函数操作 |
+| `IndexedDB`（`examTrackerChatSessions` 数据库）| AI 多会话对话历史 | 通过 `dbGetSessions/dbSaveSessions` 函数操作 |
 
 **不要**将文件二进制数据存入 `localStorage`（大小限制约 5MB）。
 

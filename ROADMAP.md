@@ -78,11 +78,23 @@
 - [x] `STATUS.md`：实时状态黑板
 - [x] `ROADMAP.md`（本文件）：项目路线图
 - [x] `CLAUDE.md`：会话启动自动加载指令
-- [x] JS 缓存破坏版本号机制（`course.js?v=N`，当前 v=31）
+- [x] JS 缓存破坏版本号机制（`course.js?v=N`，当前 v=34）
 
 ---
 
-## 当前能力全景（v=31）
+### M8 — 课程与考试管理稳定化 ✅
+> 2026-04-30
+
+- [x] 应用改名为课程与考试管理，课程创建表单简化
+- [x] 新增考试管理模块，并集成到课程页面
+- [x] 主页考试区改为临近考试提醒
+- [x] AI 会话历史迁移到独立 IndexedDB，避免 localStorage 配额导致资料/历史异常
+- [x] MinerU 单文件资料转换任务支持返回课程页后恢复轮询
+- [x] 修复返回课程页后资料/AI 功能失效：隔离 `examTrackerFiles` 与 `examTrackerChatSessions`
+
+---
+
+## 当前能力全景（v=34）
 
 | 模块 | 状态 |
 |---|---|
@@ -94,8 +106,10 @@
 | AI 学习助手（Gemini 流式）| ✅ |
 | AI 学习助手（DeepSeek 流式）| 🟡 代码已预置，待 API Key 验证 |
 | AI 学习助手（Claude）| ⚪ UI 入口已存在，后端未接入 |
-| 多会话对话历史 | ✅ |
+| 多会话对话历史 | ✅ 独立 IndexedDB |
 | 课程页考试模块 | ✅ |
+| 主页临近考试提醒 | ✅ |
+| MinerU 返回课程页后续传 | ✅ 单文件资料转换 |
 | LaTeX + Markdown 渲染 | ✅ |
 | 三语国际化 | ✅ |
 | 欢迎页 & 语言选择 | ✅ |
@@ -132,16 +146,12 @@
   - 计划：`docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md` Task 1–3
   - 目标版本：v=30
   - 核心方案：`sendAIMsg` 分离 API 内容与对话存储；全量 localStorage 写入加 try-catch；Session 上限 5 条
-- [ ] **Task1（v=32）** 还是没有解决，在课程页面点击返回来到主页面，再回到课程后所有文件消失，AI 助手对话框无法提交，也无法查看历史。
-  - 根因：`chatSessions_*` 占用大量 localStorage 配额，溢出后写入静默失败
-  - 修复方案：将 AI 会话迁移至 IndexedDB（IDB v1→v2，新增 `chatSessions` store）
-  - 计划：`docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md` Task1
-- [ ] **Task2** 考试的模块能否分课程分别存储，即将现有的主界面的考试模块改为临近考试提醒，选取每个课程最近的一次考试的基本信息列举展示，排列顺序以考试的时间顺序排列。
-  - 方案：移除 `index.html` 考试 CRUD，替换为只读 upcoming-exam widget，点击跳转课程
-  - 计划：`docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md` Task2
-- [ ] **Task3（v=33）** 当从课程页面返回时，现有的 PDF 解析会终止，用户希望解析和 PDF 加载项目在用户浏览所有界面时均不终止。
-  - 方案：持久化 MinerU `taskId` 至 localStorage，返回课程页时自动续传轮询
-  - 计划：`docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md` Task3
+- [x] AI 会话迁移至 IndexedDB（v=32/v=34）
+  - 结果：会话历史存入独立 `examTrackerChatSessions`，避免 `examTrackerFiles` 资料库升级阻塞导致页面功能失效
+- [x] 主界面考试模块改为临近考试提醒
+  - 结果：首页只读展示每课程最近一次考试，按时间排序，点击跳转课程
+- [x] MinerU 任务 ID 持久化，返回页面自动续传（v=33）
+  - 结果：单文件资料转换保存 `taskId`，返回课程页后恢复轮询
 ### p7 - UI设计问题
 - [x] 课程资料中勾选入AI助手可读范围的按键太不明显了, 干脆删去, 把AI学习助手界面的文件显示按键直接做成可交互的模式, 点开之后出现文件列表,每一行代表一个文件, 点击这行的任意位置即可添加或取消选中
 - [x] 左上角的加载中不知道是干什么的

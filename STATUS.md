@@ -14,19 +14,19 @@
 | 模块 | 状态 | 备注 |
 |---|---|---|
 | 课程列表 & 管理 | ✅ 正常 | |
-| 考试管理 | ✅ 正常 | 本地考试 CRUD + 倒计时 |
+| 主页临近考试提醒 | ✅ 正常 | 每课程取最近一次考试，按时间排序，点击进入课程 |
 | 课程页考试模块 | ✅ 正常 | 按 `courseId` 过滤，支持新增/删除课程相关考试 |
 | 章节目录（PDF 书签导入）| ✅ 正常 | |
 | 章节目录（MinerU AI 提取）| ✅ 正常 | 上传链：litterbox.catbox.moe → 0x0.st（自动 fallback）|
 | 章节目录（手动添加）| ✅ 正常 | |
 | 章节完成度追踪 | ✅ 正常 | |
 | 课程资料上传 | ✅ 正常 | |
-| PDF → Markdown（MinerU）| ✅ 正常 | 支持 > 199 页自动分片 |
+| PDF → Markdown（MinerU）| ✅ 正常 | 支持 > 199 页自动分片；单文件任务返回课程页后可恢复轮询 |
 | AI 学习助手（Gemini）| ✅ 正常 | 模型链：gemini-3-flash-preview → gemini-2.5-flash |
 | AI 可读资料选择 | ✅ 正常 | 助手顶部文件下拉选择器 |
 | AI 学习助手（DeepSeek）| 🟡 代码已预置 | 暂缺 API Key，待配置后验证 |
 | AI 学习助手（Claude）| ⚪ 未实现 | UI 入口已存在，后端待接入 |
-| 多会话对话历史 | ✅ 正常 | |
+| 多会话对话历史 | ✅ 正常 | 存储于独立 IndexedDB：`examTrackerChatSessions` |
 | LaTeX 渲染 | ✅ 正常 | KaTeX auto-render |
 | 国际化（zh/en/es）| ✅ 正常 | ~130 个字符串键 |
 | 欢迎页 & 语言选择 | ✅ 正常 | 新用户自动重定向 |
@@ -57,9 +57,9 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  feat: complete P6 root fix and P8 course exam integration
-0c51292  chore: ignore local worktrees
-7944f98  docs: update session log and roadmap for 2026-04-30 planning session
+本次工作  docs: sync project status files for v34
+442a5f9  fix: isolate AI sessions from materials IndexedDB
+34e8df2  docs: mark P6/P8 follow-up tasks accepted
 ```
 
 ---
@@ -83,9 +83,10 @@
 | P8 | 应用改名 + 简化课程表单 + 考试管理模块 | — | 应用改为课程与考试管理，新增考试 CRUD |
 | P6 | AI 对话后课程数据丢失（根本性修复） | v=30 | 分离 API 内容与对话存储；localStorage 写入 try-catch；Session 上限 5 |
 | P8 | 考试模块集成到课程界面 | v=31 | 课程页增加考试卡片、考试面板、考试 Modal，按 courseId 过滤 |
-| Task1 | AI 会话迁移至 IndexedDB | v=32 | `chatSessions_*` 从 localStorage 迁移至 IndexedDB，降低配额溢出风险 |
+| Task1 | AI 会话迁移至 IndexedDB | v=32/v=34 | `chatSessions_*` 从 localStorage 迁移至独立 IndexedDB，避免阻塞资料数据库 |
 | Task2 | 主界面考试模块改为临近考试提醒 | — | 首页只读展示每课程最近一次考试，点击跳转课程 |
 | Task3 | MinerU 任务 ID 持久化，返回页面自动续传 | v=33 | 单文件资料转换保存 `taskId`，返回课程页后恢复轮询 |
+| P6 | 返回课程页后资料/AI 功能失效修复 | v=34 | AI 会话数据库与资料数据库隔离，`examTrackerFiles` 不再强制升级 |
 
 ### 待配置环境变量
 
