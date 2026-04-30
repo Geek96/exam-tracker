@@ -1499,32 +1499,6 @@ function getDB() {
     req.onerror = () => rej(req.error);
   });
 }
-async function getDBWithStores(storeNames) {
-  let db = await getDB();
-  const missing = storeNames.filter(name => !db.objectStoreNames.contains(name));
-  if (!missing.length) return db;
-  db.close();
-  _idb = null;
-  return new Promise((res, rej) => {
-    const req = indexedDB.open('examTrackerFiles', db.version + 1);
-    req.onupgradeneeded = e => {
-      const upgradeDb = e.target.result;
-      if (!upgradeDb.objectStoreNames.contains('files')) {
-        upgradeDb.createObjectStore('files', { keyPath: 'id' });
-      }
-      if (!upgradeDb.objectStoreNames.contains('materialChunks')) {
-        upgradeDb.createObjectStore('materialChunks', { keyPath: 'id' });
-      }
-    };
-    req.onsuccess = e => {
-      _idb = e.target.result;
-      _idb.onversionchange = () => _idb.close();
-      res(_idb);
-    };
-    req.onerror = () => rej(req.error);
-    req.onblocked = () => rej(new Error('IDB materialChunks upgrade blocked'));
-  });
-}
 async function dbSave(record) {
   const db = await getDB();
   return new Promise((res, rej) => {
@@ -1552,8 +1526,28 @@ async function dbDelete(id) {
   });
 }
 
+let _chunkIdb = null;
+function getChunkDB() {
+  if (_chunkIdb) return Promise.resolve(_chunkIdb);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('examTrackerMaterialChunks', 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('materialChunks')) {
+        db.createObjectStore('materialChunks', { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = e => {
+      _chunkIdb = e.target.result;
+      _chunkIdb.onversionchange = () => _chunkIdb.close();
+      res(_chunkIdb);
+    };
+    req.onerror = () => rej(req.error);
+  });
+}
+
 async function dbSaveChunksForFile(fileId, chunks) {
-  const db = await getDBWithStores(['materialChunks']);
+  const db = await getChunkDB();
   return new Promise((res, rej) => {
     const tx = db.transaction('materialChunks', 'readwrite');
     const store = tx.objectStore('materialChunks');
@@ -1569,7 +1563,7 @@ async function dbSaveChunksForFile(fileId, chunks) {
 }
 
 async function dbGetChunksForCourse(cid) {
-  const db = await getDBWithStores(['materialChunks']);
+  const db = await getChunkDB();
   return new Promise((res, rej) => {
     const req = db.transaction('materialChunks', 'readonly').objectStore('materialChunks').getAll();
     req.onsuccess = () => res(req.result.filter(c => c.courseId === cid));
@@ -1578,7 +1572,7 @@ async function dbGetChunksForCourse(cid) {
 }
 
 async function dbDeleteChunksForFile(fileId) {
-  const db = await getDBWithStores(['materialChunks']);
+  const db = await getChunkDB();
   return new Promise((res, rej) => {
     const tx = db.transaction('materialChunks', 'readwrite');
     const store = tx.objectStore('materialChunks');
@@ -2181,6 +2175,28 @@ async function loadMarkdownContext() {
   } catch { return ''; }
 }
 
+async function loadRetrievedMaterialContext(query) {
+  if (!window.MaterialRAG) return '';
+  try {
+    const all = await dbGetAll();
+    const selectedMdIds = new Set(
+      all
+        .filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'))
+        .filter(f => selectedFiles.size === 0 || selectedFiles.has(f.id))
+        .map(f => f.id)
+    );
+    if (!selectedMdIds.size) return '';
+
+    const chunks = (await dbGetChunksForCourse(courseId))
+      .filter(c => selectedMdIds.has(c.fileId));
+    const matches = MaterialRAG.rankMaterialChunks(query, chunks, 6);
+    return MaterialRAG.formatRetrievedContext(matches);
+  } catch (e) {
+    console.warn('[ExamTracker] material retrieval failed', e);
+    return '';
+  }
+}
+
 // ── Welcome state builder ─────────────────────────────────────────────────────
 function buildWelcomeState() {
   const w = document.createElement('div');
@@ -2468,12 +2484,10 @@ async function doSend() {
   aiChatInput.value = '';
   autoResizeInput();
 
-  // For free-form messages, include md context in first turn
+  // Retrieve relevant material snippets for every API turn, while keeping history lean.
   let apiContent = text;
-  if (aiConversation.length === 0) {
-    const mdCtx = await loadMarkdownContext();
-    if (mdCtx) apiContent = text + '\n\n[课程资料]\n' + mdCtx;
-  }
+  const mdCtx = await loadRetrievedMaterialContext(text);
+  if (mdCtx) apiContent = text + '\n\n' + mdCtx;
   await sendAIMsg(text, text, apiContent);
 }
 document.getElementById('aiChatSend').addEventListener('click', doSend);

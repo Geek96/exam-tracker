@@ -137,17 +137,37 @@ test('Navigation storage fix avoids blocking the materials database upgrade path
   assert.match(src, /_chatIdb\.onversionchange\s*=\s*\(\)\s*=>\s*_chatIdb\.close\(\)/);
   assert.doesNotMatch(src, /db\.transaction\('chatSessions',\s*'readwrite'\)/);
 
-  assert.match(read('course.html'), /course\.js\?v=34/);
+  assert.match(read('course.html'), /course\.js\?v=\d+/);
 });
 
 test('Material chunks are persisted and deleted with source materials', () => {
   const src = read('course.js');
 
+  assert.match(src, /indexedDB\.open\('examTrackerMaterialChunks',\s*1\)/);
   assert.match(src, /createObjectStore\('materialChunks'/);
+  assert.doesNotMatch(src, /indexedDB\.open\('examTrackerFiles',\s*db\.version \+ 1\)/);
   assert.match(src, /async function dbSaveChunksForFile\(fileId,\s*chunks\)/);
   assert.match(src, /async function dbGetChunksForCourse\(cid\)/);
   assert.match(src, /async function dbDeleteChunksForFile\(fileId\)/);
   assert.match(src, /async function ensureChunksForMaterial\(f\)/);
   assert.match(src, /await dbDeleteChunksForFile\(f\.id\)/);
   assert.match(src, /MaterialRAG\.chunkMarkdownMaterial/);
+});
+
+test('AI free-form chat retrieves relevant material chunks on every turn', () => {
+  const src = read('course.js');
+  const html = read('course.html');
+  const materialScriptIndex = html.indexOf('material-rag.js');
+  const courseScriptIndex = html.indexOf('course.js?v=35');
+
+  assert.ok(materialScriptIndex > -1, 'course.html should load material-rag.js');
+  assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
+  assert.match(src, /async function loadRetrievedMaterialContext\(query\)/);
+  assert.match(src, /MaterialRAG\.rankMaterialChunks\(query,\s*chunks,\s*6\)/);
+  assert.match(src, /MaterialRAG\.formatRetrievedContext\(matches\)/);
+
+  const doSend = src.match(/async function doSend\(\) \{[\s\S]*?\n\}/)?.[0] || '';
+  assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
+  assert.doesNotMatch(doSend, /aiConversation\.length === 0/);
+  assert.match(doSend, /await sendAIMsg\(text,\s*text,\s*apiContent\)/);
 });
