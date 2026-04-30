@@ -1484,19 +1484,19 @@ let _idb = null;
 function getDB() {
   if (_idb) return Promise.resolve(_idb);
   return new Promise((res, rej) => {
-    const req = indexedDB.open('examTrackerFiles', 2);
+    const req = indexedDB.open('examTrackerFiles');
     req.onupgradeneeded = e => {
       const db = e.target.result;
       if (!db.objectStoreNames.contains('files')) {
         db.createObjectStore('files', { keyPath: 'id' });
       }
-      if (!db.objectStoreNames.contains('chatSessions')) {
-        db.createObjectStore('chatSessions', { keyPath: 'courseId' });
-      }
     };
-    req.onsuccess = e => { _idb = e.target.result; res(_idb); };
+    req.onsuccess = e => {
+      _idb = e.target.result;
+      _idb.onversionchange = () => _idb.close();
+      res(_idb);
+    };
     req.onerror = () => rej(req.error);
-    req.onblocked = () => rej(new Error('IDB upgrade blocked'));
   });
 }
 async function dbSave(record) {
@@ -1526,8 +1526,29 @@ async function dbDelete(id) {
   });
 }
 
-async function dbGetSessions(cid) {
+let _chatIdb = null;
+function getChatDB() {
+  if (_chatIdb) return Promise.resolve(_chatIdb);
+  return new Promise((res, rej) => {
+    const req = indexedDB.open('examTrackerChatSessions', 1);
+    req.onupgradeneeded = e => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains('sessions')) {
+        db.createObjectStore('sessions', { keyPath: 'courseId' });
+      }
+    };
+    req.onsuccess = e => {
+      _chatIdb = e.target.result;
+      _chatIdb.onversionchange = () => _chatIdb.close();
+      res(_chatIdb);
+    };
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbGetLegacySessions(cid) {
   const db = await getDB();
+  if (!db.objectStoreNames.contains('chatSessions')) return [];
   return new Promise((res, rej) => {
     const req = db.transaction('chatSessions', 'readonly')
       .objectStore('chatSessions').get(cid);
@@ -1536,11 +1557,21 @@ async function dbGetSessions(cid) {
   });
 }
 
-async function dbSaveSessions(cid, sessions) {
-  const db = await getDB();
+async function dbGetSessions(cid) {
+  const db = await getChatDB();
   return new Promise((res, rej) => {
-    const tx = db.transaction('chatSessions', 'readwrite');
-    tx.objectStore('chatSessions').put({ courseId: cid, sessions });
+    const req = db.transaction('sessions', 'readonly')
+      .objectStore('sessions').get(cid);
+    req.onsuccess = () => res(req.result ? req.result.sessions : []);
+    req.onerror = () => rej(req.error);
+  });
+}
+
+async function dbSaveSessions(cid, sessions) {
+  const db = await getChatDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction('sessions', 'readwrite');
+    tx.objectStore('sessions').put({ courseId: cid, sessions });
     tx.oncomplete = res;
     tx.onerror = () => rej(tx.error);
   });
@@ -1916,6 +1947,13 @@ async function initSessions() {
     } catch {}
   } else {
     _sessCache = await dbGetSessions(courseId).catch(() => []);
+    if (!_sessCache.length) {
+      const legacySessions = await dbGetLegacySessions(courseId).catch(() => []);
+      if (legacySessions.length) {
+        _sessCache = legacySessions;
+        await dbSaveSessions(courseId, _sessCache).catch(() => {});
+      }
+    }
   }
 
   let sessions = sessLoad();
@@ -2679,7 +2717,7 @@ async function resumePendingMinerUTasks() {
 renderHeader();
 renderChapters();
 renderProgress();
-renderMaterials();
+renderMaterials().catch(e => console.warn('[ExamTracker] renderMaterials failed', e));
 updateExamNavCard();
 initSessions().catch(e => console.warn('[ExamTracker] initSessions failed', e));
 resumePendingMinerUTasks();

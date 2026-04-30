@@ -56,9 +56,13 @@ test('P8 integrates a course-specific exam panel', () => {
 test('Task1 AI sessions stored in IndexedDB not localStorage', () => {
   const src = read('course.js');
 
-  // IDB version 2 with chatSessions store
-  assert.match(src, /indexedDB\.open\('examTrackerFiles',\s*2\)/);
-  assert.match(src, /createObjectStore\('chatSessions'/);
+  // File materials DB is opened without a forced version upgrade.
+  assert.match(src, /indexedDB\.open\('examTrackerFiles'\)/);
+  assert.doesNotMatch(src, /indexedDB\.open\('examTrackerFiles',\s*2\)/);
+
+  // Chat sessions live in an isolated DB so materials are not blocked by chat schema changes.
+  assert.match(src, /indexedDB\.open\('examTrackerChatSessions',\s*1\)/);
+  assert.match(src, /createObjectStore\('sessions'/);
 
   // IDB session helpers exist
   assert.match(src, /async function dbGetSessions\(cid\)/);
@@ -121,5 +125,17 @@ test('Task3 MinerU task IDs persisted for resume after navigation', () => {
   assert.match(src, /async function mineruSubmitAndPoll\(fileBuffer,\s*filename,\s*fileType,\s*onStatus,\s*isCancelled,\s*onTaskIdReady\)/);
   assert.match(src, /if \(onTaskIdReady\) onTaskIdReady\(taskId\)/);
 
-  assert.match(read('course.html'), /course\.js\?v=33/);
+  assert.match(read('course.html'), /course\.js\?v=\d+/);
+});
+
+test('Navigation storage fix avoids blocking the materials database upgrade path', () => {
+  const src = read('course.js');
+
+  assert.match(src, /function getChatDB\(\)/);
+  assert.match(src, /async function dbGetLegacySessions\(cid\)/);
+  assert.match(src, /_idb\.onversionchange\s*=\s*\(\)\s*=>\s*_idb\.close\(\)/);
+  assert.match(src, /_chatIdb\.onversionchange\s*=\s*\(\)\s*=>\s*_chatIdb\.close\(\)/);
+  assert.doesNotMatch(src, /db\.transaction\('chatSessions',\s*'readwrite'\)/);
+
+  assert.match(read('course.html'), /course\.js\?v=34/);
 });
