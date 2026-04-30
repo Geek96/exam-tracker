@@ -54,7 +54,11 @@
       });
 
       document.getElementById('enterBtn').addEventListener('click', function() {
-        localStorage.setItem('app_lang', currentLang);
+        try {
+          localStorage.setItem('app_lang', currentLang);
+        } catch (e) {
+          console.warn('[ExamTracker] save language failed (quota?)', e);
+        }
         window.location.href = 'index.html';
       });
 

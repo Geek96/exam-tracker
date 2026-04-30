@@ -27,7 +27,11 @@ function loadCourses() {
 }
 
 function saveCourses(courses) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+  } catch (e) {
+    console.warn('[ExamTracker] saveCourses failed (quota?)', e);
+  }
 }
 
 function createCourse({ name, subject, color }) {
@@ -273,7 +277,11 @@ function loadExams() {
 }
 
 function saveExams(exams) {
-  localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+  try {
+    localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+  } catch (e) {
+    console.warn('[ExamTracker] saveExams failed (quota?)', e);
+  }
 }
 
 let exams = loadExams();
@@ -410,7 +418,11 @@ function initLangSwitcher() {
   document.querySelectorAll('.lang-sw-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === lang);
     btn.addEventListener('click', () => {
-      localStorage.setItem('app_lang', btn.dataset.lang);
+      try {
+        localStorage.setItem('app_lang', btn.dataset.lang);
+      } catch (e) {
+        console.warn('[ExamTracker] save language failed (quota?)', e);
+      }
       document.querySelectorAll('.lang-sw-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === btn.dataset.lang));
       if (typeof applyStrings === 'function') applyStrings();
       render();

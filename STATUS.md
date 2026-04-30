@@ -4,7 +4,7 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-04-30  
-**当前版本**: `course.js?v=29`
+**当前版本**: `course.js?v=31`
 **部署状态**: ✅ 生产环境正常（Vercel）
 
 ---
@@ -15,6 +15,7 @@
 |---|---|---|
 | 课程列表 & 管理 | ✅ 正常 | |
 | 考试管理 | ✅ 正常 | 本地考试 CRUD + 倒计时 |
+| 课程页考试模块 | ✅ 正常 | 按 `courseId` 过滤，支持新增/删除课程相关考试 |
 | 章节目录（PDF 书签导入）| ✅ 正常 | |
 | 章节目录（MinerU AI 提取）| ✅ 正常 | 上传链：litterbox.catbox.moe → 0x0.st（自动 fallback）|
 | 章节目录（手动添加）| ✅ 正常 | |
@@ -56,9 +57,9 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-d322f3f  docs: note session log authors
-5cbe9b9  docs: consolidate session logs
-bfba54b  feat: complete P6 P7 P8 updates
+本次工作  feat: complete P6 root fix and P8 course exam integration
+0c51292  chore: ignore local worktrees
+7944f98  docs: update session log and roadmap for 2026-04-30 planning session
 ```
 
 ---
@@ -70,8 +71,6 @@ bfba54b  feat: complete P6 P7 P8 updates
 
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
-| P6 | AI 对话后课程数据丢失（根本性修复） | 🔴 待修复 | v=30 | 分离 API 内容与对话存储；所有 localStorage 写入加 try-catch；Session 上限 5 |
-| P8 | 考试模块集成到课程界面 | 🔴 待实现 | v=31 | 课程页增加考试卡片、考试面板、考试 Modal，按 courseId 过滤 |
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
 
 ### 已验收完成
@@ -85,6 +84,8 @@ bfba54b  feat: complete P6 P7 P8 updates
 | P6 | AI 对话数据腐坏 & 系统提示词显示 | v=28 | session 历史只持久化 display/截断内容，避免 localStorage 爆配额 |
 | P7 | AI 文件选择 UI 重设计 & 加载中清理 | v=29 | 顶部文件下拉选择器替代资料卡片 🤖 按钮，移除 topbar 加载中文字 |
 | P8 | 应用改名 + 简化课程表单 + 考试管理模块 | — | 应用改为课程与考试管理，新增考试 CRUD |
+| P6 | AI 对话后课程数据丢失（根本性修复） | v=30 | 分离 API 内容与对话存储；localStorage 写入 try-catch；Session 上限 5 |
+| P8 | 考试模块集成到课程界面 | v=31 | 课程页增加考试卡片、考试面板、考试 Modal，按 courseId 过滤 |
 
 ### 待配置环境变量
 

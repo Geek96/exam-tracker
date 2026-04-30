@@ -4,6 +4,19 @@
 
 ## 2026-04-30
 
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `course.js`, `course.html`, `course.css`, `app.js`, `welcome.html`, `strings.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`, `tests/p6-p8-regression.test.js`
+
+**完成内容**:
+- 执行 P6 根本性修复：`sendAIMsg` 将展示文本与 API 上下文分离，`aiConversation` 只保存短文本，完整 Markdown 上下文仅注入当前请求的 `apiMsgs`。
+- 为课程页、首页和欢迎页关键 `localStorage.setItem` 写入增加 `try/catch`，并将课程 AI 会话数量限制为 5 条，降低配额异常导致页面初始化中断的风险。
+- 执行 P8 课程页考试模块集成：新增考试导航卡片、课程内考试面板、添加考试 Modal，并用共享 `examTrackerExams` 数据按 `courseId` 过滤。
+- 新增 `examCount` 三语 i18n，更新 `course.js?v=31`、`STATUS.md`、`ROADMAP.md` 与 Agent 指南版本记录。
+- 新增 `node --test` 回归脚本覆盖 P6/P8 关键集成点；验证 `node --test tests/p6-p8-regression.test.js`、`node --check course.js/app.js/strings.js` 通过。
+
+---
+
 **操作者**: Claude Sonnet 4.6
 
 **涉及文件**: `STATUS.md`, `ROADMAP.md`, `docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md`

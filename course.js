@@ -10,14 +10,41 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'examTrackerCourses';
+const EXAMS_KEY = 'examTrackerExams';
 
 function loadCourses() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
   catch { return []; }
 }
 function saveCourses(courses) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
+  } catch (e) {
+    console.warn('[ExamTracker] saveCourses failed (quota?)', e);
+  }
 }
+
+function loadExams() {
+  try { return JSON.parse(localStorage.getItem(EXAMS_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveExamsLocal(exams) {
+  try {
+    localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+  } catch (e) {
+    console.warn('[ExamTracker] saveExams failed (quota?)', e);
+  }
+}
+
+const EXAM_TYPE_KEYS = {
+  opening: 'examTypeOpening',
+  midterm: 'examTypeMidterm',
+  final:   'examTypeFinal',
+  quiz:    'examTypeQuiz',
+  credit:  'examTypeCredit',
+  other:   'examTypeOther',
+};
 
 // ── Current course ────────────────────────────────────────────────────────────
 const params = new URLSearchParams(location.search);
@@ -1477,7 +1504,9 @@ function loadFileSelection() {
   } catch { return new Set(); }
 }
 function saveFileSelection(sel) {
-  localStorage.setItem('aiFileSelection_' + courseId, JSON.stringify([...sel]));
+  try {
+    localStorage.setItem('aiFileSelection_' + courseId, JSON.stringify([...sel]));
+  } catch {}
 }
 let selectedFiles = loadFileSelection();
 
@@ -1719,13 +1748,18 @@ function sessSave(s) {
   }
 }
 function actGet()    { return localStorage.getItem(actKey()); }
-function actSet(id)  { localStorage.setItem(actKey(), id); }
+function actSet(id)  {
+  try {
+    localStorage.setItem(actKey(), id);
+  } catch {}
+}
 
 function sessCreate(hint) {
-  const sessions = sessLoad();
+  let sessions = sessLoad();
   const id = 'sess_' + Date.now();
   const title = hint ? hint.slice(0, 32) + (hint.length > 32 ? '…' : '') : '新对话';
   sessions.unshift({ id, title, createdAt: Date.now(), messages: [] });
+  if (sessions.length > 5) sessions = sessions.slice(0, 5);
   sessSave(sessions);
   actSet(id);
   return id;
@@ -1973,19 +2007,19 @@ async function handleQuickAction(type) {
   const hoursPerDay = parseFloat(aiHoursPerDay.value) || 3;
   const mdCtx = await loadMarkdownContext();
 
-  let userContent, displayLabel;
+  let apiContent, displayLabel;
   if (type === 'plan') {
     const guide = getActiveGuide();
-    userContent = buildContextMsg(daysLeft, hoursPerDay, guide, mdCtx);
+    apiContent = buildContextMsg(daysLeft, hoursPerDay, guide, mdCtx);
     displayLabel = `📋 生成复习计划 · ${daysLeft} 天 · 每天 ${hoursPerDay} 小时`;
   } else if (type === 'summary') {
-    userContent = `请帮我总结课程「${escHtml(course.name)}」的核心知识点和重点内容。${mdCtx ? '\n\n课程资料：\n' + mdCtx : ''}`;
+    apiContent = `请帮我总结课程「${escHtml(course.name)}」的核心知识点和重点内容。${mdCtx ? '\n\n课程资料：\n' + mdCtx : ''}`;
     displayLabel = '📖 总结课程重点';
   } else {
-    userContent = `请根据课程「${escHtml(course.name)}」的内容为我出几道测验题，并给出答案。${mdCtx ? '\n\n课程资料：\n' + mdCtx : ''}`;
+    apiContent = `请根据课程「${escHtml(course.name)}」的内容为我出几道测验题，并给出答案。${mdCtx ? '\n\n课程资料：\n' + mdCtx : ''}`;
     displayLabel = '❓ 出题测验';
   }
-  await sendAIMsg(userContent, displayLabel);
+  await sendAIMsg(displayLabel, displayLabel, apiContent);
 }
 
 // ── AI Guide Tabs ─────────────────────────────────────────────────────────────
@@ -2116,7 +2150,7 @@ ${reviewGuide || '（未提供）'}`;
 }
 
 // ── Core: send one message and stream the response ────────────────────────────
-async function sendAIMsg(userContent, displayLabel) {
+async function sendAIMsg(userText, displayLabel, apiContent) {
   if (aiStreaming) return;
   aiStreaming = true;
 
@@ -2127,12 +2161,12 @@ async function sendAIMsg(userContent, displayLabel) {
   aiChatInput.disabled = true;
   document.getElementById('aiChatSend').disabled = true;
 
-  aiConversation.push({ role: 'user', content: userContent, display: displayLabel || userContent });
+  aiConversation.push({ role: 'user', content: userText, display: displayLabel || userText });
   sessPersist();
 
   const userEl = document.createElement('div');
   userEl.className = 'chat-msg chat-msg-user';
-  userEl.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(displayLabel || userContent)}</div>`;
+  userEl.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(displayLabel || userText)}</div>`;
   aiChatMessages.appendChild(userEl);
   aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
 
@@ -2149,6 +2183,13 @@ async function sendAIMsg(userContent, displayLabel) {
   let fullText = '';
 
   try {
+    const apiMsgs = aiConversation.map((m, i) => {
+      if (i === aiConversation.length - 1 && apiContent) {
+        return { role: 'user', content: apiContent };
+      }
+      return { role: m.role, content: m.content };
+    });
+
     const res = await fetch('/api/study-plan', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2157,7 +2198,7 @@ async function sendAIMsg(userContent, displayLabel) {
         provider:   aiProvider,
         courseName: course.name,
         subject:    course.subject,
-        messages:   aiConversation,
+        messages:   apiMsgs,
         lang:       localStorage.getItem('app_lang') || 'zh',
       }),
     });
@@ -2229,12 +2270,12 @@ async function doSend() {
   autoResizeInput();
 
   // For free-form messages, include md context in first turn
-  let content = text;
+  let apiContent = text;
   if (aiConversation.length === 0) {
     const mdCtx = await loadMarkdownContext();
-    if (mdCtx) content = text + '\n\n[课程资料]\n' + mdCtx;
+    if (mdCtx) apiContent = text + '\n\n[课程资料]\n' + mdCtx;
   }
-  await sendAIMsg(content, text);
+  await sendAIMsg(text, text, apiContent);
 }
 document.getElementById('aiChatSend').addEventListener('click', doSend);
 aiChatInput.addEventListener('keydown', e => {
@@ -2388,11 +2429,152 @@ function updateLayoutHeightVars() {
   document.documentElement.style.setProperty('--hero-h',   hh + 'px');
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+//  Course Exam Panel
+// ══════════════════════════════════════════════════════════════════════════════
+
+let courseExams = loadExams();
+let selectedCourseExamType = 'final';
+
+function courseExamDaysBadge(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return '';
+  if (d < 0)  return `<span class="exam-item-days urgent">${window.t('expired')}</span>`;
+  if (d === 0) return `<span class="exam-item-days urgent">${window.t('examToday')}</span>`;
+  const label = window.tf('daysLeft', { n: d });
+  if (d <= 7)  return `<span class="exam-item-days urgent">${label}</span>`;
+  if (d <= 30) return `<span class="exam-item-days soon">${label}</span>`;
+  return `<span class="exam-item-days">${label}</span>`;
+}
+
+function renderCourseExams() {
+  const list  = document.getElementById('examPanelList');
+  const empty = document.getElementById('examPanelEmpty');
+  if (!list || !empty) return;
+  list.innerHTML = '';
+
+  const mine   = courseExams.filter(e => e.courseId === courseId);
+  const sorted = [...mine].sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
+
+  if (sorted.length === 0) {
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const locale = appLocale();
+  sorted.forEach(exam => {
+    const item = document.createElement('div');
+    item.className = 'exam-panel-item';
+    const dateStr = exam.examDate
+      ? new Date(exam.examDate).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
+      : '—';
+    const typeLabel = window.t(EXAM_TYPE_KEYS[exam.type] || 'examTypeOther');
+    item.innerHTML = `
+      <div class="exam-panel-item-info">
+        <div class="exam-panel-item-name">${escHtml(exam.name)}</div>
+        <div class="exam-panel-item-meta">
+          <span class="exam-type-badge ${exam.type}">${typeLabel}</span>
+          <span>📅 ${dateStr}</span>
+          ${courseExamDaysBadge(exam.examDate)}
+        </div>
+      </div>
+      <button class="exam-panel-del-btn" title="${window.t('deleteExam')}">✕</button>
+    `;
+    item.querySelector('.exam-panel-del-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      courseExams = courseExams.filter(x => x.id !== exam.id);
+      saveExamsLocal(courseExams);
+      updateExamNavCard();
+      renderCourseExams();
+      showToast(window.t('examDeleted'));
+    });
+    list.appendChild(item);
+  });
+}
+
+function updateExamNavCard() {
+  const mine = courseExams.filter(e => e.courseId === courseId);
+  const meta = document.getElementById('examNavMeta');
+  if (meta) {
+    meta.textContent = mine.length > 0
+      ? window.tf('examCount', { n: mine.length })
+      : window.t('noExamsHint');
+  }
+}
+
+document.getElementById('examNavCard').addEventListener('click', () => {
+  document.getElementById('panelOverview').style.display = 'none';
+  const panelExams = document.getElementById('panelExams');
+  panelExams.style.display = 'flex';
+  renderCourseExams();
+});
+
+document.getElementById('btnExamsBack').addEventListener('click', () => {
+  document.getElementById('panelExams').style.display = 'none';
+  document.getElementById('panelOverview').style.display = 'block';
+});
+
+const courseExamModalOverlay = document.getElementById('courseExamModalOverlay');
+const courseExamForm = document.getElementById('courseExamForm');
+
+function openCourseExamModal() {
+  courseExamForm.reset();
+  selectedCourseExamType = 'final';
+  document.querySelectorAll('#courseExamTypeGroup .exam-type-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.type === selectedCourseExamType);
+  });
+  courseExamModalOverlay.classList.add('open');
+  document.getElementById('courseExamInputName').focus();
+}
+
+function closeCourseExamModal() {
+  courseExamModalOverlay.classList.remove('open');
+}
+
+document.getElementById('btnAddExamCourse').addEventListener('click', openCourseExamModal);
+document.getElementById('courseExamModalClose').addEventListener('click', closeCourseExamModal);
+document.getElementById('courseExamBtnCancel').addEventListener('click', closeCourseExamModal);
+courseExamModalOverlay.addEventListener('click', e => {
+  if (e.target === courseExamModalOverlay) closeCourseExamModal();
+});
+
+document.getElementById('courseExamTypeGroup').addEventListener('click', e => {
+  const btn = e.target.closest('.exam-type-btn');
+  if (!btn) return;
+  document.querySelectorAll('#courseExamTypeGroup .exam-type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedCourseExamType = btn.dataset.type;
+});
+
+courseExamForm.addEventListener('submit', e => {
+  e.preventDefault();
+  const name = document.getElementById('courseExamInputName').value.trim();
+  const date = document.getElementById('courseExamInputDate').value;
+  if (!name) { showToast(window.t('examNameRequired')); return; }
+  if (!date) { showToast(window.t('examDateRequired')); return; }
+
+  courseExams.unshift({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    courseId,
+    name,
+    examDate: date,
+    type: selectedCourseExamType,
+    createdAt: Date.now(),
+  });
+  saveExamsLocal(courseExams);
+  updateExamNavCard();
+  renderCourseExams();
+  closeCourseExamModal();
+  showToast(window.t('examAdded'));
+});
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderHeader();
 renderChapters();
 renderProgress();
 renderMaterials();
+updateExamNavCard();
 if (typeof applyStrings === 'function') applyStrings();
 
 // Set accurate layout heights after first render

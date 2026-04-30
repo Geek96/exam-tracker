@@ -119,6 +119,7 @@ var STRINGS = {
     deleteExam: '删除', examAdded: '考试已添加 ✓', examDeleted: '已删除考试',
     noExamsTitle: '暂无考试安排', noExamsHint: '点击「添加考试」新增一场考试',
     examDateRequired: '请填写考试日期', examNameRequired: '请填写考试名称',
+    examCount: '{n} 场考试',
     myExams: '我的考试',
   },
   en: {
@@ -240,6 +241,7 @@ var STRINGS = {
     deleteExam: 'Delete', examAdded: 'Exam added ✓', examDeleted: 'Exam deleted',
     noExamsTitle: 'No exams scheduled', noExamsHint: 'Click "Add Exam" to schedule one',
     examDateRequired: 'Please enter the exam date', examNameRequired: 'Please enter an exam name',
+    examCount: '{n} exam(s)',
     myExams: 'My Exams',
   },
   es: {
@@ -361,6 +363,7 @@ var STRINGS = {
     deleteExam: 'Eliminar', examAdded: 'Examen añadido ✓', examDeleted: 'Examen eliminado',
     noExamsTitle: 'Sin exámenes programados', noExamsHint: 'Haz clic en "Añadir Examen" para programar uno',
     examDateRequired: 'Por favor ingresa la fecha del examen', examNameRequired: 'Por favor ingresa el nombre del examen',
+    examCount: '{n} examen(es)',
     myExams: 'Mis Exámenes',
   }
 };

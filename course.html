@@ -69,6 +69,20 @@
           </div>
         </div>
 
+        <!-- Exam navigation card -->
+        <div class="chapter-nav-card holo-card-border exam-nav-card" id="examNavCard" style="cursor:pointer">
+          <div class="chapter-nav-surface holo-card-surface">
+            <div class="chapter-nav-icon">📅</div>
+            <div class="chapter-nav-info">
+              <div class="chapter-nav-title" data-i18n="myExams">我的考试</div>
+              <div class="chapter-nav-meta" id="examNavMeta"></div>
+            </div>
+            <div class="chapter-nav-right">
+              <span class="chapter-nav-arrow">›</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Empty import card (shown when no chapters) -->
         <div class="import-landing-inline" id="importLandingInline" style="display:none">
           <div class="import-card-inline" id="dropZoneCard">
@@ -133,6 +147,26 @@
           </div>
           <div id="chaptersList" class="chapters-list-scrollable"></div>
         </div>
+      </div>
+
+      <!-- ── State C: Exams panel ── -->
+      <div id="panelExams" style="display:none; height:100%; flex-direction:column;">
+
+        <div class="chapters-panel-header">
+          <button class="chapters-back-btn" id="btnExamsBack" data-i18n="backBtn">← 返回</button>
+          <h3 class="chapters-panel-title" data-i18n="myExams">我的考试</h3>
+          <button class="btn-sm accent" id="btnAddExamCourse" data-i18n="addExam">+ 添加考试</button>
+        </div>
+
+        <div class="exam-panel-body" id="examPanelBody">
+          <div class="exam-panel-empty" id="examPanelEmpty" style="display:none">
+            <div class="materials-empty-icon">📅</div>
+            <p data-i18n="noExamsTitle">暂无考试安排</p>
+            <p class="empty-sub" data-i18n="noExamsHint">点击「添加考试」新增一场考试</p>
+          </div>
+          <div class="exam-panel-list" id="examPanelList"></div>
+        </div>
+
       </div>
 
     </div><!-- /panel-left -->
@@ -263,6 +297,39 @@
     </div><!-- /panel-right -->
 
   </main><!-- /course-layout -->
+
+  <!-- ── Exam Add Modal (course page) ── -->
+  <div class="modal-overlay" id="courseExamModalOverlay">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 class="modal-title" data-i18n="addExamTitle">添加新考试</h3>
+        <button class="modal-close" id="courseExamModalClose">✕</button>
+      </div>
+      <form class="modal-form" id="courseExamForm">
+        <label class="form-label"><span data-i18n="examName">考试名称</span> <span class="required">*</span></label>
+        <input class="form-input" type="text" id="courseExamInputName"
+          data-i18n-ph="examNamePh" placeholder="例：期末数学考试" maxlength="60" required />
+
+        <label class="form-label"><span data-i18n="examDate">考试日期</span> <span class="required">*</span></label>
+        <input class="form-input" type="date" id="courseExamInputDate" required />
+
+        <label class="form-label" data-i18n="examType">考试类型</label>
+        <div class="exam-type-group" id="courseExamTypeGroup">
+          <button type="button" class="exam-type-btn selected" data-type="final" data-i18n="examTypeFinal">期末考</button>
+          <button type="button" class="exam-type-btn" data-type="midterm" data-i18n="examTypeMidterm">期中测验</button>
+          <button type="button" class="exam-type-btn" data-type="quiz" data-i18n="examTypeQuiz">小测</button>
+          <button type="button" class="exam-type-btn" data-type="opening" data-i18n="examTypeOpening">开学测验</button>
+          <button type="button" class="exam-type-btn" data-type="credit" data-i18n="examTypeCredit">学分考</button>
+          <button type="button" class="exam-type-btn" data-type="other" data-i18n="examTypeOther">其他</button>
+        </div>
+
+        <div class="modal-actions">
+          <button type="button" class="btn-cancel" id="courseExamBtnCancel" data-i18n="cancel">取消</button>
+          <button type="submit" class="btn-submit" data-i18n="addExam">添加考试</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- ══════════════════════════════════════════
        PDF Import Modal  (2-step)
@@ -511,6 +578,6 @@
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
   <script src="strings.js"></script>
-  <script src="course.js?v=29"></script>
+  <script src="course.js?v=31"></script>
 </body>
 </html>
