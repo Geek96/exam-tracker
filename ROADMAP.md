@@ -78,7 +78,7 @@
 - [x] `STATUS.md`：实时状态黑板
 - [x] `ROADMAP.md`（本文件）：项目路线图
 - [x] `CLAUDE.md`：会话启动自动加载指令
-- [x] JS 缓存破坏版本号机制（`course.js?v=N`，当前 v=34）
+- [x] JS 缓存破坏版本号机制（`course.js?v=N`，当前 v=35）
 
 ---
 
@@ -91,10 +91,11 @@
 - [x] AI 会话历史迁移到独立 IndexedDB，避免 localStorage 配额导致资料/历史异常
 - [x] MinerU 单文件资料转换任务支持返回课程页后恢复轮询
 - [x] 修复返回课程页后资料/AI 功能失效：隔离 `examTrackerFiles` 与 `examTrackerChatSessions`
+- [x] Markdown 教材分块检索：按章节、题号和关键词为 AI 注入相关片段
 
 ---
 
-## 当前能力全景（v=34）
+## 当前能力全景（v=35）
 
 | 模块 | 状态 |
 |---|---|
@@ -104,6 +105,7 @@
 | 课程资料管理 | ✅ |
 | PDF → Markdown（MinerU，含自动分片）| ✅ |
 | AI 学习助手（Gemini 流式）| ✅ |
+| AI 教材片段检索（Markdown）| ✅ 独立 IndexedDB 索引 |
 | AI 学习助手（DeepSeek 流式）| 🟡 代码已预置，待 API Key 验证 |
 | AI 学习助手（Claude）| ⚪ UI 入口已存在，后端未接入 |
 | 多会话对话历史 | ✅ 独立 IndexedDB |
