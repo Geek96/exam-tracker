@@ -66,11 +66,14 @@
 
 ## TASKS:
 
-> 计划文件：`docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md`
-> 版本路线：v29 → v30（P6 根本性修复）→ v31（P8 考试模块集成）
+> 计划文件：`docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md`
+> 版本路线：v31 → v32（Task1 IDB sessions）→ v33（Task3 MinerU 持久化）
 
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
+| Task1 | AI 会话迁移至 IndexedDB（修复 localStorage 溢出） | ⬜ 待实现 | v=32 | `course.js` getDB v2 + `dbGetSessions`/`dbSaveSessions` + `initSessions` async |
+| Task2 | 主界面考试模块改为临近考试提醒（只读） | ⬜ 待实现 | — | `index.html` + `app.js` + `styles.css` + `strings.js` |
+| Task3 | MinerU 任务 ID 持久化，返回页面自动续传 | ⬜ 待实现 | v=33 | `course.js` persist taskId + `resumeMinerUPoll` + `resumePendingMinerUTasks` |
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
 
 ### 已验收完成
