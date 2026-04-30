@@ -65,12 +65,14 @@ bfba54b  feat: complete P6 P7 P8 updates
 
 ## TASKS:
 
-> 计划文件：`docs/superpowers/plans/已完成-2026-04-30-p6-p7-p8-fixes-and-features.md`
-> 版本路线：v27 → v28（P6 bug fix）→ v29（P7 UI）→ P8（index.html/app.js，不影响 course.js 版本号）
+> 计划文件：`docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md`
+> 版本路线：v29 → v30（P6 根本性修复）→ v31（P8 考试模块集成）
 
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
-| P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | v=23 | `api/study-plan.js` + course.html model toggle |
+| P6 | AI 对话后课程数据丢失（根本性修复） | 🔴 待修复 | v=30 | 分离 API 内容与对话存储；所有 localStorage 写入加 try-catch；Session 上限 5 |
+| P8 | 考试模块集成到课程界面 | 🔴 待实现 | v=31 | 课程页增加考试卡片、考试面板、考试 Modal，按 courseId 过滤 |
+| P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
 
 ### 已验收完成
 
