@@ -4,6 +4,18 @@
 
 ## 2026-04-30
 
+**操作者**: Claude Sonnet 4.6
+
+**涉及文件**: `STATUS.md`, `ROADMAP.md`, `docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md`
+
+**完成内容**:
+- 深度分析 P6 bug 根因：`aiConversation[0].content` 存储了完整 API 内容（300 KB+ Markdown 上下文），每次后续对话重复发送；`saveCourses()`/`saveFileSelection()` 缺少 try-catch，`localStorage` 超限时 `QuotaExceededError` 沿 `persist()→renderProgress()` 初始化链向上抛出，导致页面初始化中断、所有功能失效。
+- 编写 P6 根本性修复 + P8 考试模块集成完整实现计划，保存至 `docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md`。
+- 计划包含 7 个 Task：分离 API 内容与对话存储（v30）、全量 localStorage 写入加 try-catch、Session 上限 5 条、考试面板 HTML/CSS/JS 集成（v31）、i18n 补充、STATUS 更新。
+- 更新 `STATUS.md` TASKS 板块，标注 P6（v30）和 P8（v31）为当前待实现任务。
+
+---
+
 **操作者**: Codex (GPT-5)
 
 - 更新 `ROADMAP.md` 至 v29 当前状态，补充 M8 课程与考试管理重构里程碑，并同步 `STATUS.md` 当前功能与近期提交信息。
