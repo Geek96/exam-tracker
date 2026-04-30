@@ -529,6 +529,7 @@ const pdfDrop     = document.getElementById('pdfDrop');
 const pdfLoading  = document.getElementById('pdfLoading');
 const pdfError    = document.getElementById('pdfError');
 const pdfNoOutline= document.getElementById('pdfNoOutline');
+const pdfSourceChoice = document.getElementById('pdfSourceChoice');
 const step1Footer = document.getElementById('step1Footer');
 
 function resetStep1UI() {
@@ -556,6 +557,7 @@ function showSubstate(state) {
   pdfDrop.style.display          = state === 'drop'      ? 'flex' : 'none';
   pdfLoading.style.display       = state === 'loading'   ? 'flex' : 'none';
   pdfError.style.display         = state === 'error'     ? 'flex' : 'none';
+  pdfSourceChoice.style.display  = state === 'sourceChoice' ? 'flex' : 'none';
   pdfNoOutline.style.display     = state === 'noOutline' ? 'flex' : 'none';
   pdfMineruProcess.style.display = state === 'mineru'    ? 'flex' : 'none';
 }
@@ -617,7 +619,9 @@ async function handlePdfFile(file) {
     }
 
     extractedOutline = normalizeOutline(outline);
-    onOutlineReady();
+    document.getElementById('pdfBookmarkCount').textContent =
+      window.tf('bookmarkCount', { n: extractedOutline.length });
+    showSubstate('sourceChoice');
   } catch (err) {
     showError('PDF 解析失败：' + err.message);
   }
@@ -639,6 +643,11 @@ document.getElementById('btnParseText').addEventListener('click', () => {
 
 // ── MinerU AI extraction flow ─────────────────────────────────────────────────
 document.getElementById('btnMineruExtract').addEventListener('click', startMineruFlow);
+document.getElementById('btnUseBookmark').addEventListener('click', () => {
+  showSubstate('drop');
+  onOutlineReady();
+});
+document.getElementById('btnUseAI').addEventListener('click', startMineruFlow);
 
 async function startMineruFlow() {
   if (!currentPdfArrayBuffer) return;
@@ -1460,6 +1469,18 @@ function fmtSize(b) {
   return `${(b/1048576).toFixed(1)} MB`;
 }
 
+// ── AI file selection ─────────────────────────────────────────────────────────
+function loadFileSelection() {
+  try {
+    const ids = JSON.parse(localStorage.getItem('aiFileSelection_' + courseId) || '[]');
+    return new Set(ids);
+  } catch { return new Set(); }
+}
+function saveFileSelection(sel) {
+  localStorage.setItem('aiFileSelection_' + courseId, JSON.stringify([...sel]));
+}
+let selectedFiles = loadFileSelection();
+
 async function renderMaterials() {
   const all   = await dbGetAll();
   const files = all.filter(f => f.courseId === courseId);
@@ -1478,6 +1499,9 @@ async function renderMaterials() {
 
   files.forEach(f => {
     const isText = f.type === 'text/plain' || (f.name || '').endsWith('.md') || (f.name || '').endsWith('.txt');
+    const isMd   = (f.name || '').toLowerCase().endsWith('.md');
+    const isSelectable = isMd;
+    const isSelected   = selectedFiles.has(f.id);
     const card = document.createElement('div');
     card.className = 'material-card';
     card.innerHTML = `
@@ -1485,10 +1509,26 @@ async function renderMaterials() {
       <div class="material-card-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
       <div class="material-card-meta">${fmtSize(f.size)} · ${new Date(f.addedAt).toLocaleDateString(appLocale())}</div>
       <div class="material-card-actions">
+        ${isSelectable ? `<button class="btn-mat-sel${isSelected ? ' selected' : ''}" title="${window.t('aiFileSelectTitle')}">🤖</button>` : ''}
         <button class="btn-mat-open">${window.t('viewFile')}</button>
         <button class="btn-mat-rename">✎</button>
         <button class="btn-mat-del">${window.t('deleteFile')}</button>
       </div>`;
+    if (isSelectable) {
+      const selBtn = card.querySelector('.btn-mat-sel');
+      selBtn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (selectedFiles.has(f.id)) {
+          selectedFiles.delete(f.id);
+          selBtn.classList.remove('selected');
+        } else {
+          selectedFiles.add(f.id);
+          selBtn.classList.add('selected');
+        }
+        saveFileSelection(selectedFiles);
+        refreshContextBadge();
+      });
+    }
     card.querySelector('.btn-mat-open').addEventListener('click', e => {
       e.stopPropagation();
       if (isText) { openTextEditModal(f); return; }
@@ -1502,9 +1542,26 @@ async function renderMaterials() {
       if (isText) { openTextEditModal(f); return; }
       openRenameModal(f);
     });
-    card.querySelector('.btn-mat-del').addEventListener('click', async e => {
+    const delBtn = card.querySelector('.btn-mat-del');
+    let deleteArmed = false;
+    let disarmTimer = null;
+    delBtn.addEventListener('click', async e => {
       e.stopPropagation();
+      if (!deleteArmed) {
+        deleteArmed = true;
+        delBtn.textContent = window.t('confirmDeleteFile');
+        delBtn.classList.add('btn-mat-del-confirm');
+        disarmTimer = setTimeout(() => {
+          deleteArmed = false;
+          delBtn.textContent = window.t('deleteFile');
+          delBtn.classList.remove('btn-mat-del-confirm');
+        }, 3000);
+        return;
+      }
+      clearTimeout(disarmTimer);
       await dbDelete(f.id);
+      selectedFiles.delete(f.id);
+      saveFileSelection(selectedFiles);
       await renderMaterials();
       showToast(window.t('deleted'));
     });
@@ -1537,8 +1594,12 @@ async function uploadMaterialFiles(fileList) {
   }
 
   // PDFs: convert to Markdown via MinerU (background)
+  if (pdfs.length === 1) {
+    showToast(`📄 ${pdfs[0].name} ${window.t('convertingToMd')}`);
+  } else if (pdfs.length > 1) {
+    showToast(window.tf('batchConvertStart', { n: pdfs.length }));
+  }
   for (const file of pdfs) {
-    showToast(`📄 ${file.name} ${window.t('convertingToMd')}`);
     startMaterialMineruJob(file, 'pdf');
   }
 }
@@ -1784,11 +1845,14 @@ async function refreshContextBadge() {
   try {
     const all = await dbGetAll();
     const mds = all.filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'));
+    const active = mds.filter(f => selectedFiles.size === 0 || selectedFiles.has(f.id));
     const badge = document.getElementById('aiContextBadge');
     const countEl = document.getElementById('aiContextCount');
     if (badge && countEl) {
-      badge.style.display = mds.length > 0 ? 'flex' : 'none';
-      countEl.textContent = window.tf('filesCount', { n: mds.length });
+      badge.style.display = active.length > 0 ? 'flex' : 'none';
+      countEl.textContent = selectedFiles.size > 0
+        ? window.tf('filesCount', { n: active.length }) + '/' + mds.length
+        : window.tf('filesCount', { n: active.length });
     }
   } catch {}
 }
@@ -1797,7 +1861,12 @@ async function refreshContextBadge() {
 async function loadMarkdownContext() {
   try {
     const all = await dbGetAll();
-    const mds = all.filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'));
+    const mds = all.filter(f => {
+      if (f.courseId !== courseId) return false;
+      if (!(f.name || '').toLowerCase().endsWith('.md')) return false;
+      if (selectedFiles.size > 0) return selectedFiles.has(f.id);
+      return true;
+    });
     if (!mds.length) return '';
     const fileList = mds.map(f => f.name).join('、');
     const header = `以下是课程「${escHtml(course.name)}」的课程资料文件，请在回答时优先参考相关文件内容（可用文件：${fileList}）：\n\n`;

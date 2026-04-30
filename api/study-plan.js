@@ -36,6 +36,8 @@ async function handler(req, res) {
   try {
     if (provider === 'claude') {
       await handleClaude(system, msgs, res);
+    } else if (provider === 'deepseek') {
+      await handleDeepSeek(system, msgs, res);
     } else {
       await handleGemini(system, msgs, res);
     }
@@ -79,6 +81,50 @@ async function handleClaude(system, messages, res) {
     try {
       var ev = JSON.parse(line);
       if (ev.type === 'content_block_delta' && ev.delta && ev.delta.type === 'text_delta') return ev.delta.text;
+    } catch {}
+  });
+}
+
+async function handleDeepSeek(system, messages, res) {
+  var apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) { res.status(500).json({ error: 'DEEPSEEK_API_KEY 未在 Vercel 环境变量中配置' }); return; }
+
+  var contents = [{ role: 'system', content: system }].concat(
+    messages.map(function(m) { return { role: m.role, content: m.content }; })
+  );
+
+  var upstream;
+  try {
+    upstream = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+      },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        stream: true,
+        max_tokens: 4096,
+        messages: contents,
+      }),
+    });
+  } catch (err) {
+    res.status(502).json({ error: '无法连接 DeepSeek：' + err.message }); return;
+  }
+
+  if (!upstream.ok) {
+    var raw = await upstream.text();
+    var msg = raw;
+    try { msg = JSON.parse(raw).error.message || raw; } catch {}
+    res.status(upstream.status).json({ error: msg }); return;
+  }
+
+  await streamSSE(upstream.body, res, function(line) {
+    try {
+      var ev = JSON.parse(line);
+      if (ev.choices && ev.choices[0] && ev.choices[0].delta && ev.choices[0].delta.content) {
+        return ev.choices[0].delta.content;
+      }
     } catch {}
   });
 }

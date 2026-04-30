@@ -155,6 +155,7 @@
             <div class="ai-model-toggle" id="aiProviderBtns">
               <button class="ai-model-btn active" data-provider="gemini">Gemini</button>
               <button class="ai-model-btn" data-provider="claude">Claude</button>
+              <button class="ai-model-btn" data-provider="deepseek">DeepSeek</button>
             </div>
             <button class="btn-sm ai-history-btn" id="aiBtnHistory"
               data-i18n="history" data-i18n-title="historyBtnTitle" title="历史对话">历史</button>
@@ -287,6 +288,16 @@
             <p class="pdf-error-icon">⚠️</p>
             <p id="pdfErrorMsg"></p>
             <button class="btn-retry" id="btnRetry" data-i18n="retrySelect">重新选择</button>
+          </div>
+
+          <div class="pdf-source-choice" id="pdfSourceChoice" style="display:none">
+            <p class="pdf-source-title" data-i18n="bookmarkFound">已找到 PDF 书签目录</p>
+            <p class="pdf-source-count" id="pdfBookmarkCount"></p>
+            <div class="source-choice-btns">
+              <button class="btn-source-primary" id="btnUseBookmark" data-i18n="useBookmark">📑 使用 PDF 书签</button>
+              <span class="source-or" data-i18n="orText">或</span>
+              <button class="btn-source-ai" id="btnUseAI" data-i18n="useAiExtract">🤖 改用 AI 提取</button>
+            </div>
           </div>
 
           <div class="pdf-no-outline" id="pdfNoOutline" style="display:none">
@@ -493,6 +504,6 @@
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
   <script src="strings.js"></script>
-  <script src="course.js?v=22"></script>
+  <script src="course.js?v=27"></script>
 </body>
 </html>
