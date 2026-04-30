@@ -6,6 +6,12 @@
 
 **操作者**: Codex (GPT-5)
 
+- Confirmed v35 was deployed to Vercel production after pushing `main`, then updated and saved project status files to record the production deployment state.
+
+---
+
+**操作者**: Codex (GPT-5)
+
 - Implemented Markdown textbook retrieval for AI chat: added `material-rag.js` chunking/ranking helpers, persisted per-file chunks in isolated `examTrackerMaterialChunks`, loaded the helper before `course.js?v=35`, and injects relevant snippets on every free-form AI turn.
 - Added regression coverage for section/exercise ranking, independent chunk storage, and repeated AI retrieval after the first turn.
 - Updated `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`, and this session log for v35.

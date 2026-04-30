@@ -5,7 +5,7 @@
 
 **最后更新**: 2026-04-30  
 **当前版本**: `course.js?v=35`
-**部署状态**: ✅ 生产环境正常（Vercel）
+**部署状态**: ✅ v35 已部署至 Vercel 生产环境
 
 ---
 
@@ -60,9 +60,9 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  docs: sync status for material retrieval v35
+本次工作  docs: record v35 production deployment
+b2ce8af  docs: sync status for material retrieval v35
 771ea77  feat: retrieve relevant course material snippets for AI chat
-6654bbb  feat: persist markdown retrieval chunks
 ```
 
 ---
