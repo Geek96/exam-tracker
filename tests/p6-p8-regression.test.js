@@ -81,7 +81,7 @@ test('Task1 AI sessions stored in IndexedDB not localStorage', () => {
   assert.doesNotMatch(src, /chatSessions_\$\{courseId\}/);
 
   // version bump
-  assert.match(read('course.html'), /course\.js\?v=32/);
+  assert.match(read('course.html'), /course\.js\?v=\d+/);
 });
 
 test('Task2 main page shows upcoming exam reminders not CRUD', () => {
@@ -106,4 +106,20 @@ test('Task2 main page shows upcoming exam reminders not CRUD', () => {
 
   // New styles exist
   assert.match(css, /\.upcoming-exam-item/);
+});
+
+test('Task3 MinerU task IDs persisted for resume after navigation', () => {
+  const src = read('course.js');
+
+  assert.match(src, /function addPendingMinerUTask\(taskId,/);
+  assert.match(src, /function removePendingMinerUTask\(taskId\)/);
+  assert.match(src, /function loadPendingMinerUTasks\(\)/);
+  assert.match(src, /async function resumeMinerUPoll\(taskId,/);
+  assert.match(src, /resumePendingMinerUTasks\(\)/);
+
+  // mineruSubmitAndPoll accepts onTaskIdReady callback
+  assert.match(src, /async function mineruSubmitAndPoll\(fileBuffer,\s*filename,\s*fileType,\s*onStatus,\s*isCancelled,\s*onTaskIdReady\)/);
+  assert.match(src, /if \(onTaskIdReady\) onTaskIdReady\(taskId\)/);
+
+  assert.match(read('course.html'), /course\.js\?v=33/);
 });

@@ -135,3 +135,5 @@
 - Task1: Migrated AI chat sessions from `localStorage` to IndexedDB `chatSessions` store and added one-time legacy session migration.
 - Updated `course.js` cache version to `v=32` and added regression coverage for the IDB session storage path.
 - Task2: Replaced the homepage exam CRUD section with a read-only upcoming-exam reminders widget grouped by course.
+- Task3: Persisted single-file MinerU material conversion task IDs and resume polling when returning to a course page.
+- Updated `course.js` cache version to `v=33` and added regression coverage for MinerU task resume hooks.

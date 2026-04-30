@@ -11,6 +11,24 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 // ── Storage ───────────────────────────────────────────────────────────────────
 const STORAGE_KEY = 'examTrackerCourses';
 const EXAMS_KEY = 'examTrackerExams';
+const PENDING_MINERU_PREFIX = 'pendingMinerU_';
+
+function pendingKey() { return PENDING_MINERU_PREFIX + courseId; }
+
+function loadPendingMinerUTasks() {
+  try { return JSON.parse(localStorage.getItem(pendingKey()) || '[]'); }
+  catch { return []; }
+}
+function addPendingMinerUTask(taskId, label, mdName) {
+  const tasks = loadPendingMinerUTasks();
+  if (tasks.find(t => t.taskId === taskId)) return;
+  tasks.push({ taskId, label, mdName, startedAt: Date.now() });
+  try { localStorage.setItem(pendingKey(), JSON.stringify(tasks)); } catch {}
+}
+function removePendingMinerUTask(taskId) {
+  const tasks = loadPendingMinerUTasks().filter(t => t.taskId !== taskId);
+  try { localStorage.setItem(pendingKey(), JSON.stringify(tasks)); } catch {}
+}
 
 function loadCourses() {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
@@ -373,7 +391,7 @@ const mjJobs = new Map();
 
 function mjCreate(label, type) {
   const id = 'mj' + (++mjSeq);
-  mjJobs.set(id, { id, label, type, step: 1, status: '准备中…', done: false, failed: false, mdContent: null, needsRange: false, pollTimer: null });
+  mjJobs.set(id, { id, label, type, step: 1, status: '准备中…', done: false, failed: false, mdContent: null, needsRange: false, pollTimer: null, taskId: null });
   mjRender();
   return id;
 }
@@ -458,6 +476,7 @@ function mjRender() {
           mineruContent = null;
           currentTocJobId = null;
         }
+        if (j.taskId) removePendingMinerUTask(j.taskId);
         mjUpdate(j.id, { failed: true, status: '已手动终止' });
         setTimeout(() => { mjJobs.delete(j.id); mjRender(); }, 3000);
       });
@@ -841,7 +860,7 @@ async function splitPdfIfNeeded(arrayBuffer, maxPages) {
 // Upload → MinerU submit → poll until done. Returns markdown string.
 // onStatus(msg) is called with progress updates.
 // isCancelled() should return true if the job was cancelled.
-async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isCancelled) {
+async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isCancelled, onTaskIdReady) {
   const mimeType = fileType === 'html' ? 'text/html' : 'application/pdf';
   onStatus('正在上传…');
   const fileUrl = await uploadToTmpfiles(fileBuffer, filename, mimeType);
@@ -859,6 +878,7 @@ async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isC
   if (!res.ok || data.error) throw new Error(data.error || `HTTP ${res.status}`);
 
   const taskId = data.taskId;
+  if (onTaskIdReady) onTaskIdReady(taskId);
   for (let attempt = 0; attempt < 120; attempt++) {
     await new Promise(r => setTimeout(r, 6000));
     if (isCancelled()) throw Object.assign(new Error('已取消'), { cancelled: true });
@@ -873,6 +893,23 @@ async function mineruSubmitAndPoll(fileBuffer, filename, fileType, onStatus, isC
     onStatus(`MinerU 解析中…${prog}`);
   }
   throw new Error('MinerU 处理超时（超过 12 分钟）');
+}
+
+async function resumeMinerUPoll(taskId, onStatus, isCancelled) {
+  for (let attempt = 0; attempt < 120; attempt++) {
+    await new Promise(r => setTimeout(r, 6000));
+    if (isCancelled()) throw Object.assign(new Error('已取消'), { cancelled: true });
+    const r = await fetch(`/api/mineru-result?taskId=${encodeURIComponent(taskId)}`);
+    const result = await r.json();
+    if (result.status === 'done') {
+      if (!result.content) throw new Error('MinerU 返回内容为空');
+      return result.content;
+    }
+    if (result.status === 'failed') throw new Error('MinerU 处理失败：' + (result.error || ''));
+    const prog = result.progress ? ` ${result.progress}%` : '';
+    onStatus(`恢复中：MinerU 解析中…${prog}`);
+  }
+  throw new Error('MinerU 处理超时');
 }
 
 async function uploadToTmpfiles(arrayBuffer, filename, mimeType) {
@@ -1648,6 +1685,13 @@ async function startMaterialMineruJob(file, fileType) {
   const ext    = isHtml ? /\.html?$/i : /\.pdf$/i;
   const baseName = file.name.replace(ext, '');
   const jobId = mjCreate(baseName + ' → MD', 'material');
+  const mdName = baseName + '_MinerU.md';
+  let _activeTaskId = null;
+  const onTaskIdReady = tid => {
+    _activeTaskId = tid;
+    mjUpdate(jobId, { taskId: tid });
+    addPendingMinerUTask(tid, baseName + ' → MD', mdName);
+  };
 
   const isCancelled = () => { const j = mjJobs.get(jobId); return !j || j.failed; };
 
@@ -1660,7 +1704,8 @@ async function startMaterialMineruJob(file, fileType) {
       combinedMarkdown = await mineruSubmitAndPoll(
         buf, file.name, 'html',
         msg => mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: msg }),
-        isCancelled
+        isCancelled,
+        onTaskIdReady
       );
     } else {
       const chunks = await splitPdfIfNeeded(buf, 199);
@@ -1674,19 +1719,21 @@ async function startMaterialMineruJob(file, fileType) {
             const summary = total > 1 ? chunkStatus.map((s, j) => `[${j+1}] ${s}`).join('  ') : msg;
             mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: summary });
           },
-          isCancelled
+          isCancelled,
+          total === 1 ? onTaskIdReady : null
         );
       }));
       combinedMarkdown = markdowns.join('\n\n');
     }
 
     mjUpdate(jobId, { step: 3, status: '正在保存…' });
-    const mdName = baseName + '_MinerU.md';
     await saveMdAsMaterial(combinedMarkdown, mdName);
+    if (_activeTaskId) removePendingMinerUTask(_activeTaskId);
     mjUpdate(jobId, { done: true, status: `✅ 已保存为 ${mdName}` });
     setTimeout(() => { mjJobs.delete(jobId); mjRender(); }, 5000);
 
   } catch (err) {
+    if (_activeTaskId) removePendingMinerUTask(_activeTaskId);
     if (err.cancelled) return;
     mjUpdate(jobId, { failed: true, status: '❌ 失败：' + err.message });
   }
@@ -2599,6 +2646,35 @@ courseExamForm.addEventListener('submit', e => {
   showToast(window.t('examAdded'));
 });
 
+async function resumePendingMinerUTasks() {
+  const pending = loadPendingMinerUTasks();
+  if (!pending.length) return;
+  for (const task of pending) {
+    if (Date.now() - task.startedAt > 12 * 60 * 1000) {
+      removePendingMinerUTask(task.taskId);
+      continue;
+    }
+    const label = task.label + ' (续)';
+    const jobId = mjCreate(label, 'material');
+    mjUpdate(jobId, { taskId: task.taskId });
+    const isCancelled = () => { const j = mjJobs.get(jobId); return !j || j.failed; };
+
+    resumeMinerUPoll(task.taskId, msg => mjUpdate(jobId, { step: 2, status: msg }), isCancelled)
+      .then(async content => {
+        mjUpdate(jobId, { step: 3, status: '正在保存…' });
+        await saveMdAsMaterial(content, task.mdName);
+        removePendingMinerUTask(task.taskId);
+        mjUpdate(jobId, { done: true, status: `✅ 已保存为 ${task.mdName}` });
+        await renderMaterials();
+        setTimeout(() => { mjJobs.delete(jobId); mjRender(); }, 5000);
+      })
+      .catch(err => {
+        if (!err.cancelled) mjUpdate(jobId, { failed: true, status: '❌ ' + (err.message || '恢复失败') });
+        removePendingMinerUTask(task.taskId);
+      });
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 renderHeader();
 renderChapters();
@@ -2606,6 +2682,7 @@ renderProgress();
 renderMaterials();
 updateExamNavCard();
 initSessions().catch(e => console.warn('[ExamTracker] initSessions failed', e));
+resumePendingMinerUTasks();
 if (typeof applyStrings === 'function') applyStrings();
 
 // Set accurate layout heights after first render
