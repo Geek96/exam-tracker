@@ -66,14 +66,8 @@
 
 ## TASKS:
 
-> 计划文件：`docs/superpowers/plans/2026-04-30-p6-storage-exam-redesign-task-resume.md`
-> 版本路线：v31 → v32（Task1 IDB sessions）→ v33（Task3 MinerU 持久化）
-
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
-| Task1 | AI 会话迁移至 IndexedDB（修复 localStorage 溢出） | ⬜ 待实现 | v=32 | `course.js` getDB v2 + `dbGetSessions`/`dbSaveSessions` + `initSessions` async |
-| Task2 | 主界面考试模块改为临近考试提醒（只读） | ⬜ 待实现 | — | `index.html` + `app.js` + `styles.css` + `strings.js` |
-| Task3 | MinerU 任务 ID 持久化，返回页面自动续传 | ⬜ 待实现 | v=33 | `course.js` persist taskId + `resumeMinerUPoll` + `resumePendingMinerUTasks` |
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
 
 ### 已验收完成
@@ -89,6 +83,9 @@
 | P8 | 应用改名 + 简化课程表单 + 考试管理模块 | — | 应用改为课程与考试管理，新增考试 CRUD |
 | P6 | AI 对话后课程数据丢失（根本性修复） | v=30 | 分离 API 内容与对话存储；localStorage 写入 try-catch；Session 上限 5 |
 | P8 | 考试模块集成到课程界面 | v=31 | 课程页增加考试卡片、考试面板、考试 Modal，按 courseId 过滤 |
+| Task1 | AI 会话迁移至 IndexedDB | v=32 | `chatSessions_*` 从 localStorage 迁移至 IndexedDB，降低配额溢出风险 |
+| Task2 | 主界面考试模块改为临近考试提醒 | — | 首页只读展示每课程最近一次考试，点击跳转课程 |
+| Task3 | MinerU 任务 ID 持久化，返回页面自动续传 | v=33 | 单文件资料转换保存 `taskId`，返回课程页后恢复轮询 |
 
 ### 待配置环境变量
 

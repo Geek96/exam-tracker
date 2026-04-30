@@ -137,3 +137,4 @@
 - Task2: Replaced the homepage exam CRUD section with a read-only upcoming-exam reminders widget grouped by course.
 - Task3: Persisted single-file MinerU material conversion task IDs and resume polling when returning to a course page.
 - Updated `course.js` cache version to `v=33` and added regression coverage for MinerU task resume hooks.
+- User accepted Task1/Task2/Task3; moved them to accepted status in `STATUS.md` and renamed the implementation plan with the `已完成-` prefix.
