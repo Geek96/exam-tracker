@@ -14,6 +14,7 @@
 | 模块 | 状态 | 备注 |
 |---|---|---|
 | 课程列表 & 管理 | ✅ 正常 | |
+| 考试管理 | ✅ 正常 | 本地考试 CRUD + 倒计时 |
 | 章节目录（PDF 书签导入）| ✅ 正常 | |
 | 章节目录（MinerU AI 提取）| ✅ 正常 | 上传链：litterbox.catbox.moe → 0x0.st（自动 fallback）|
 | 章节目录（手动添加）| ✅ 正常 | |
@@ -21,6 +22,7 @@
 | 课程资料上传 | ✅ 正常 | |
 | PDF → Markdown（MinerU）| ✅ 正常 | 支持 > 199 页自动分片 |
 | AI 学习助手（Gemini）| ✅ 正常 | 模型链：gemini-3-flash-preview → gemini-2.5-flash |
+| AI 可读资料选择 | ✅ 正常 | 助手顶部文件下拉选择器 |
 | AI 学习助手（DeepSeek）| 🟡 代码已预置 | 暂缺 API Key，待配置后验证 |
 | AI 学习助手（Claude）| ⚪ 未实现 | UI 入口已存在，后端待接入 |
 | 多会话对话历史 | ✅ 正常 | |
@@ -54,9 +56,9 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-a3fc715  docs: require agents to read STATUS.md and ROADMAP.md at session start
-ad0c088  fix: add 0x0.st fallback for PDF upload (litterbox 504 timeout)
-7bd2b73  Fix i18n gaps, upload SSL error, and welcome page entry
+d322f3f  docs: note session log authors
+5cbe9b9  docs: consolidate session logs
+bfba54b  feat: complete P6 P7 P8 updates
 ```
 
 ---

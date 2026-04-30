@@ -6,6 +6,8 @@
 
 **操作者**: Codex (GPT-5)
 
+- 更新 `ROADMAP.md` 至 v29 当前状态，补充 M8 课程与考试管理重构里程碑，并同步 `STATUS.md` 当前功能与近期提交信息。
+- 提交剩余项目说明文件改动：根目录 `AGENTS.md`、`CLAUDE.md` 架构规划补充、`ROADMAP.md` 路线图同步。
 - 合并两份会话日志为根目录 `SESSION_LOG.md`，删除 `.agents/SESSION_LOG.md`，并将最新提交推送到 GitHub `main` 以触发 Vercel 自动部署。
 - Implemented and accepted P6/P7/P8: fixed AI chat session persistence/display overflow, redesigned AI-readable file selection as a dropdown, renamed the app to 课程与考试管理, simplified course creation, and added local exam management.
 - Updated `course.js` cache version to `v=29`, marked P6/P7/P8 as completed in `STATUS.md`, and renamed the implementation plan file with the `已完成-` prefix.
