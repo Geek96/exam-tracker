@@ -18,7 +18,7 @@
 
 ## 项目概览
 
-**名称**: 复习追踪器 / Study Tracker  
+**名称**: 课程与考试管理 / Course & Exam Manager
 **技术栈**: 纯浏览器 HTML + CSS + Vanilla JS，Vercel Serverless Functions（Node.js）  
 **部署**: Vercel，通过 GitHub `main` 分支自动触发部署  
 **无构建步骤**: 不使用任何打包工具（Vite/Webpack）。所有 JS 直接由浏览器加载。
@@ -47,7 +47,7 @@
 ```
 
 **规则**：每次修改 `course.js` 后，必须同步递增 `course.html` 中的 `?v=N`。  
-当前版本：`v=27`（每次修改后更新此处记录）。
+当前版本：`v=29`（每次修改后更新此处记录）。
 
 ---
 

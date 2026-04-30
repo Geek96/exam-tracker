@@ -4,7 +4,7 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-04-30  
-**当前版本**: `course.js?v=27`
+**当前版本**: `course.js?v=29`
 **部署状态**: ✅ 生产环境正常（Vercel）
 
 ---
@@ -63,15 +63,12 @@ ad0c088  fix: add 0x0.st fallback for PDF upload (litterbox 504 timeout)
 
 ## TASKS:
 
-> 计划文件：`docs/superpowers/plans/2026-04-30-p6-p7-p8-fixes-and-features.md`
-> 版本路线：v27（当前）→ v28（P6 bug fix）→ v29（P7 UI）→ P8（index.html/app.js，不影响 course.js 版本号）
+> 计划文件：`docs/superpowers/plans/已完成-2026-04-30-p6-p7-p8-fixes-and-features.md`
+> 版本路线：v27 → v28（P6 bug fix）→ v29（P7 UI）→ P8（index.html/app.js，不影响 course.js 版本号）
 
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | v=23 | `api/study-plan.js` + course.html model toggle |
-| P6（新）| AI 对话数据腐坏 & 系统提示词显示 | ⬜ 待实现 | v=28 | `course.js` sessPersist + display 字段 + sessSave 异常捕获 |
-| P7（新）| AI 文件选择 UI 重设计 & 加载中清理 | ⬜ 待实现 | v=29 | `course.js` 下拉式文件选择器，移除 🤖 按钮 |
-| P8（新）| 应用改名 + 简化课程表单 + 考试管理模块 | ⬜ 待实现 | — | `index.html` `app.js` `strings.js` `styles.css` |
 
 ### 已验收完成
 
@@ -80,7 +77,10 @@ ad0c088  fix: add 0x0.st fallback for PDF upload (litterbox 504 timeout)
 | P6 | 批量 PDF 转换 UX | v=24 | `uploadMaterialFiles` 合并 toast |
 | P7 | TOC 来源选择 | v=25 | modal 新增 sourceChoice 子状态 |
 | P8a | 资料删除二步确认 | v=26 | `renderMaterials` delete 闭包状态 |
-| P8b | AI 可读文件选择 | v=27 | localStorage 选择 Set + 卡片 🤖 按钮 |
+| P8b | AI 可读文件选择 | v=27 | localStorage 选择 Set（卡片按钮已由 P7 下拉选择器替换） |
+| P6 | AI 对话数据腐坏 & 系统提示词显示 | v=28 | session 历史只持久化 display/截断内容，避免 localStorage 爆配额 |
+| P7 | AI 文件选择 UI 重设计 & 加载中清理 | v=29 | 顶部文件下拉选择器替代资料卡片 🤖 按钮，移除 topbar 加载中文字 |
+| P8 | 应用改名 + 简化课程表单 + 考试管理模块 | — | 应用改为课程与考试管理，新增考试 CRUD |
 
 ### 待配置环境变量
 

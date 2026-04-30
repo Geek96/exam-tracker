@@ -1499,9 +1499,6 @@ async function renderMaterials() {
 
   files.forEach(f => {
     const isText = f.type === 'text/plain' || (f.name || '').endsWith('.md') || (f.name || '').endsWith('.txt');
-    const isMd   = (f.name || '').toLowerCase().endsWith('.md');
-    const isSelectable = isMd;
-    const isSelected   = selectedFiles.has(f.id);
     const card = document.createElement('div');
     card.className = 'material-card';
     card.innerHTML = `
@@ -1509,26 +1506,10 @@ async function renderMaterials() {
       <div class="material-card-name" title="${escHtml(f.name)}">${escHtml(f.name)}</div>
       <div class="material-card-meta">${fmtSize(f.size)} · ${new Date(f.addedAt).toLocaleDateString(appLocale())}</div>
       <div class="material-card-actions">
-        ${isSelectable ? `<button class="btn-mat-sel${isSelected ? ' selected' : ''}" title="${window.t('aiFileSelectTitle')}">🤖</button>` : ''}
         <button class="btn-mat-open">${window.t('viewFile')}</button>
         <button class="btn-mat-rename">✎</button>
         <button class="btn-mat-del">${window.t('deleteFile')}</button>
       </div>`;
-    if (isSelectable) {
-      const selBtn = card.querySelector('.btn-mat-sel');
-      selBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        if (selectedFiles.has(f.id)) {
-          selectedFiles.delete(f.id);
-          selBtn.classList.remove('selected');
-        } else {
-          selectedFiles.add(f.id);
-          selBtn.classList.add('selected');
-        }
-        saveFileSelection(selectedFiles);
-        refreshContextBadge();
-      });
-    }
     card.querySelector('.btn-mat-open').addEventListener('click', e => {
       e.stopPropagation();
       if (isText) { openTextEditModal(f); return; }
@@ -1720,7 +1701,23 @@ document.querySelectorAll('.ai-model-btn').forEach(btn => {
 function sessKey()   { return `chatSessions_${courseId}`; }
 function actKey()    { return `chatActive_${courseId}`; }
 function sessLoad()  { return JSON.parse(localStorage.getItem(sessKey()) || '[]'); }
-function sessSave(s) { localStorage.setItem(sessKey(), JSON.stringify(s)); }
+function sessSave(s) {
+  try {
+    localStorage.setItem(sessKey(), JSON.stringify(s));
+  } catch {
+    try {
+      const trimmed = s.slice(0, 3).map(sess => ({
+        ...sess,
+        messages: sess.messages.slice(-8).map(m => ({
+          role: m.role,
+          content: (m.display || m.content || '').slice(0, 500),
+          display: m.display,
+        })),
+      }));
+      localStorage.setItem(sessKey(), JSON.stringify(trimmed));
+    } catch {}
+  }
+}
 function actGet()    { return localStorage.getItem(actKey()); }
 function actSet(id)  { localStorage.setItem(actKey(), id); }
 
@@ -1740,9 +1737,14 @@ function sessPersist() {
   const s = sessions.find(x => x.id === id); if (!s) return;
   const firstUser = aiConversation.find(m => m.role === 'user');
   if (firstUser && s.title === '新对话') {
-    s.title = firstUser.content.slice(0, 32) + (firstUser.content.length > 32 ? '…' : '');
+    const titleSrc = firstUser.display || firstUser.content;
+    s.title = titleSrc.slice(0, 32) + (titleSrc.length > 32 ? '…' : '');
   }
-  s.messages = aiConversation.slice();
+  s.messages = aiConversation.map(m => ({
+    role: m.role,
+    content: m.display || ((m.content || '').length > 2000 ? m.content.slice(0, 2000) + '…' : m.content),
+    display: m.display,
+  }));
   sessSave(sessions);
 }
 
@@ -1775,7 +1777,7 @@ function renderSessionMessages() {
     if (msg.role === 'user') {
       const el = document.createElement('div');
       el.className = 'chat-msg chat-msg-user';
-      el.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(msg.content)}</div>`;
+      el.innerHTML = `<div class="chat-bubble chat-bubble-user">${escHtml(msg.display || msg.content)}</div>`;
       aiChatMessages.appendChild(el);
     } else {
       const el = document.createElement('div'); el.className = 'chat-msg chat-msg-assistant';
@@ -1849,12 +1851,69 @@ async function refreshContextBadge() {
     const badge = document.getElementById('aiContextBadge');
     const countEl = document.getElementById('aiContextCount');
     if (badge && countEl) {
-      badge.style.display = active.length > 0 ? 'flex' : 'none';
+      badge.style.display = mds.length > 0 ? 'flex' : 'none';
       countEl.textContent = selectedFiles.size > 0
         ? window.tf('filesCount', { n: active.length }) + '/' + mds.length
         : window.tf('filesCount', { n: active.length });
     }
   } catch {}
+}
+
+// ── AI File Picker ────────────────────────────────────────────────────────────
+async function renderFilePicker() {
+  const all = await dbGetAll();
+  const mds = all.filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'));
+  const list = document.getElementById('aiFilePickerList');
+  const empty = document.getElementById('aiFilePickerEmpty');
+  if (!list) return;
+  list.innerHTML = '';
+
+  if (mds.length === 0) {
+    if (empty) empty.style.display = 'block';
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  mds.forEach(f => {
+    const isSelected = selectedFiles.size === 0 || selectedFiles.has(f.id);
+    const row = document.createElement('div');
+    row.className = 'ai-file-picker-row' + (isSelected ? ' selected' : '');
+    row.innerHTML = `<div class="ai-file-picker-check">${isSelected ? '✓' : ''}</div><div class="ai-file-picker-name" title="${escHtml(f.name)}">📋 ${escHtml(f.name)}</div>`;
+    row.addEventListener('click', () => {
+      if (selectedFiles.size === 0) {
+        mds.forEach(m => { if (m.id !== f.id) selectedFiles.add(m.id); });
+      } else if (selectedFiles.has(f.id)) {
+        selectedFiles.delete(f.id);
+      } else {
+        selectedFiles.add(f.id);
+      }
+      saveFileSelection(selectedFiles);
+      refreshContextBadge();
+      renderFilePicker();
+    });
+    list.appendChild(row);
+  });
+}
+
+const aiContextBadge = document.getElementById('aiContextBadge');
+const aiFilePickerEl = document.getElementById('aiFilePicker');
+
+if (aiContextBadge && aiFilePickerEl) {
+  aiContextBadge.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const isOpen = aiFilePickerEl.style.display !== 'none';
+    if (isOpen) {
+      aiFilePickerEl.style.display = 'none';
+    } else {
+      aiFilePickerEl.style.display = 'block';
+      await renderFilePicker();
+    }
+  });
+  document.addEventListener('click', (e) => {
+    if (!aiFilePickerEl.contains(e.target) && e.target !== aiContextBadge) {
+      aiFilePickerEl.style.display = 'none';
+    }
+  });
 }
 
 // Load markdown file contents to include as AI context
@@ -2068,7 +2127,7 @@ async function sendAIMsg(userContent, displayLabel) {
   aiChatInput.disabled = true;
   document.getElementById('aiChatSend').disabled = true;
 
-  aiConversation.push({ role: 'user', content: userContent });
+  aiConversation.push({ role: 'user', content: userContent, display: displayLabel || userContent });
   sessPersist();
 
   const userEl = document.createElement('div');

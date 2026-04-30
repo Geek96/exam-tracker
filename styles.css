@@ -554,3 +554,116 @@ body::after {
 .lang-sw-btn { background:none; border:1px solid rgba(255,255,255,0.12); border-radius:6px; color:var(--muted); font-size:11px; font-weight:600; padding:3px 7px; cursor:pointer; transition:all 0.15s; }
 .lang-sw-btn:hover { color:var(--text); border-color:rgba(255,255,255,0.3); }
 .lang-sw-btn.active { color:var(--holo-cyan); border-color:var(--holo-cyan); background:rgba(0,229,255,0.08); }
+
+/* ── Exam Section ──────────────────────────────────────────────────────────── */
+.exam-section { margin-top: 40px; }
+
+.exam-empty {
+  text-align: center;
+  padding: 40px 20px;
+  opacity: .6;
+}
+
+.exam-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.exam-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--card);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: background .15s;
+}
+.exam-item:hover { background: rgba(255,255,255,.05); }
+
+.exam-item-info {
+  flex: 1;
+  min-width: 0;
+}
+.exam-item-name {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.exam-item-meta {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.exam-type-badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 600;
+  background: rgba(91,141,239,.15);
+  color: var(--accent);
+  border: 1px solid rgba(91,141,239,.3);
+}
+.exam-type-badge.final { background: rgba(249,123,107,.15); color: #F97B6B; border-color: rgba(249,123,107,.3); }
+.exam-type-badge.midterm { background: rgba(240,180,41,.15); color: #F0B429; border-color: rgba(240,180,41,.3); }
+.exam-type-badge.quiz { background: rgba(89,193,133,.15); color: #59C185; border-color: rgba(89,193,133,.3); }
+.exam-type-badge.credit { background: rgba(167,139,250,.15); color: #A78BFA; border-color: rgba(167,139,250,.3); }
+.exam-type-badge.opening { background: rgba(56,189,248,.15); color: #38BDF8; border-color: rgba(56,189,248,.3); }
+
+.exam-item-days {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.exam-item-days.urgent { color: #F97B6B; }
+.exam-item-days.soon { color: #F0B429; }
+
+.exam-del-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: all .15s;
+}
+.exam-del-btn:hover {
+  background: rgba(249,123,107,.15);
+  color: #F97B6B;
+}
+
+/* ── Exam Type Button Group (modal) ────────────────────────────────────────── */
+.exam-type-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.exam-type-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+}
+.exam-type-btn:hover {
+  background: rgba(255,255,255,.1);
+  color: #fff;
+}
+.exam-type-btn.selected {
+  background: rgba(91,141,239,.2);
+  border-color: var(--accent);
+  color: var(--accent);
+}

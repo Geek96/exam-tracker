@@ -30,13 +30,13 @@ function saveCourses(courses) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(courses));
 }
 
-function createCourse({ name, subject, examDate, totalTopics, color }) {
+function createCourse({ name, subject, color }) {
   return {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     name,
     subject: subject || '',
-    examDate: examDate || '',
-    totalTopics: parseInt(totalTopics) || 0,
+    examDate: '',
+    totalTopics: 0,
     completedTopics: 0,
     color,
     createdAt: Date.now(),
@@ -200,10 +200,8 @@ courseForm.addEventListener('submit', (e) => {
 
   const course = createCourse({
     name,
-    subject:     document.getElementById('inputSubject').value.trim(),
-    examDate:    document.getElementById('inputDate').value,
-    totalTopics: document.getElementById('inputTotal').value,
-    color:       selectedColor,
+    subject: document.getElementById('inputSubject').value.trim(),
+    color:   selectedColor,
   });
 
   courses.unshift(course);
@@ -265,6 +263,140 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.remove('show'), 2500);
 }
 
+// ── Exam Management ───────────────────────────────────────────────────────────
+
+const EXAMS_KEY = 'examTrackerExams';
+
+function loadExams() {
+  try { return JSON.parse(localStorage.getItem(EXAMS_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveExams(exams) {
+  localStorage.setItem(EXAMS_KEY, JSON.stringify(exams));
+}
+
+let exams = loadExams();
+let selectedExamType = 'final';
+
+const EXAM_TYPE_KEYS = {
+  opening: 'examTypeOpening',
+  midterm: 'examTypeMidterm',
+  final: 'examTypeFinal',
+  quiz: 'examTypeQuiz',
+  credit: 'examTypeCredit',
+  other: 'examTypeOther',
+};
+
+function examDaysBadge(dateStr) {
+  const d = daysUntil(dateStr);
+  if (d === null) return '';
+  if (d < 0) return `<span class="exam-item-days urgent">${window.t('expired')}</span>`;
+  if (d === 0) return `<span class="exam-item-days urgent">${window.t('examToday')}</span>`;
+  const label = window.tf('daysLeft', { n: d });
+  if (d <= 7) return `<span class="exam-item-days urgent">${label}</span>`;
+  if (d <= 30) return `<span class="exam-item-days soon">${label}</span>`;
+  return `<span class="exam-item-days">${label}</span>`;
+}
+
+function renderExams() {
+  const list = document.getElementById('examList');
+  const empty = document.getElementById('examEmpty');
+  if (!list || !empty) return;
+  list.innerHTML = '';
+
+  const sorted = [...exams].sort((a, b) => new Date(a.examDate) - new Date(b.examDate));
+
+  if (sorted.length === 0) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+
+  const lang = localStorage.getItem('app_lang') || 'zh';
+  const locale = lang === 'zh' ? 'zh-CN' : lang === 'es' ? 'es-ES' : 'en-US';
+
+  sorted.forEach(exam => {
+    const item = document.createElement('div');
+    item.className = 'exam-item';
+    const dateStr = exam.examDate
+      ? new Date(exam.examDate).toLocaleDateString(locale, { year: 'numeric', month: 'long', day: 'numeric' })
+      : '—';
+    const typeLabel = window.t(EXAM_TYPE_KEYS[exam.type] || 'examTypeOther');
+    item.innerHTML = `
+      <div class="exam-item-info">
+        <div class="exam-item-name">${escHtml(exam.name)}</div>
+        <div class="exam-item-meta">
+          <span class="exam-type-badge ${exam.type}">${typeLabel}</span>
+          <span>📅 ${dateStr}</span>
+          ${examDaysBadge(exam.examDate)}
+        </div>
+      </div>
+      <button class="exam-del-btn" title="${window.t('deleteExam')}">✕</button>
+    `;
+    item.querySelector('.exam-del-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      exams = exams.filter(x => x.id !== exam.id);
+      saveExams(exams);
+      renderExams();
+      showToast(window.t('examDeleted'));
+    });
+    list.appendChild(item);
+  });
+}
+
+const examModalOverlay = document.getElementById('examModalOverlay');
+const examForm = document.getElementById('examForm');
+
+function openExamModal() {
+  examForm.reset();
+  selectedExamType = 'final';
+  document.querySelectorAll('.exam-type-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.type === selectedExamType);
+  });
+  examModalOverlay.classList.add('open');
+  document.getElementById('examInputName').focus();
+}
+
+function closeExamModal() {
+  examModalOverlay.classList.remove('open');
+}
+
+document.getElementById('btnAddExam').addEventListener('click', openExamModal);
+document.getElementById('examModalClose').addEventListener('click', closeExamModal);
+document.getElementById('examBtnCancel').addEventListener('click', closeExamModal);
+examModalOverlay.addEventListener('click', (e) => {
+  if (e.target === examModalOverlay) closeExamModal();
+});
+
+document.getElementById('examTypeGroup').addEventListener('click', (e) => {
+  const btn = e.target.closest('.exam-type-btn');
+  if (!btn) return;
+  document.querySelectorAll('.exam-type-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  selectedExamType = btn.dataset.type;
+});
+
+examForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const name = document.getElementById('examInputName').value.trim();
+  const date = document.getElementById('examInputDate').value;
+  if (!name) { showToast(window.t('examNameRequired')); return; }
+  if (!date) { showToast(window.t('examDateRequired')); return; }
+
+  exams.unshift({
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    name,
+    examDate: date,
+    type: selectedExamType,
+    createdAt: Date.now(),
+  });
+  saveExams(exams);
+  renderExams();
+  closeExamModal();
+  showToast(window.t('examAdded'));
+});
+
 // ── Utils ─────────────────────────────────────────────────────────────────────
 
 function escHtml(s) {
@@ -282,6 +414,7 @@ function initLangSwitcher() {
       document.querySelectorAll('.lang-sw-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === btn.dataset.lang));
       if (typeof applyStrings === 'function') applyStrings();
       render();
+      renderExams();
     });
   });
 }
@@ -290,4 +423,5 @@ function initLangSwitcher() {
 
 render();
 if (typeof applyStrings === 'function') applyStrings();
+renderExams();
 initLangSwitcher();

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>课程详情 - 复习追踪器</title>
+  <title>课程详情 - 课程与考试管理</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="course.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
@@ -14,7 +14,7 @@
   <header class="topbar">
     <a class="back-btn" href="index.html" data-i18n="backBtn">← 返回</a>
     <div class="topbar-mid" id="topbarMid">
-      <span class="topbar-name" id="topbarName" data-i18n="loading">加载中…</span>
+      <span class="topbar-name" id="topbarName"></span>
       <span class="topbar-subject" id="topbarSubject"></span>
     </div>
     <div class="topbar-right">
@@ -148,9 +148,16 @@
             <span class="ai-brand-name" data-i18n="aiAssistant">AI 学习助手</span>
           </div>
           <div class="ai-client-controls">
-            <div class="ai-context-badge" id="aiContextBadge" style="display:none"
-              data-i18n-title="aiContextTitle" title="可读取的 Markdown 课程资料">
-              <span>📎</span><span id="aiContextCount">0</span>
+            <div class="ai-context-wrap">
+              <button class="ai-context-badge" id="aiContextBadge" style="display:none"
+                data-i18n-title="filePickerTitle" title="选择 AI 可读取的文件">
+                <span>📎</span><span id="aiContextCount">0</span>
+              </button>
+              <div class="ai-file-picker" id="aiFilePicker" style="display:none">
+                <div class="ai-file-picker-head" data-i18n="filePickerTitle">选择 AI 可读取的文件</div>
+                <div class="ai-file-picker-list" id="aiFilePickerList"></div>
+                <div class="ai-file-picker-empty" id="aiFilePickerEmpty" style="display:none" data-i18n="noMdFiles">暂无 Markdown 文件</div>
+              </div>
             </div>
             <div class="ai-model-toggle" id="aiProviderBtns">
               <button class="ai-model-btn active" data-provider="gemini">Gemini</button>
@@ -504,6 +511,6 @@
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
   <script src="strings.js"></script>
-  <script src="course.js?v=27"></script>
+  <script src="course.js?v=29"></script>
 </body>
 </html>
