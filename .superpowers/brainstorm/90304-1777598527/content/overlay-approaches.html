@@ -1,0 +1,81 @@
+<h2>Demo 引导覆盖层风格</h2>
+<p class="subtitle">三种 overlay 实现方案，哪种最适合你的用户？</p>
+
+<div class="options">
+
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Spotlight 聚光灯</h3>
+      <p>半透明黑色遮罩 + 目标元素高亮镂空，tooltip 贴近元素。经典引导风格，用户注意力100%集中在当前步骤。</p>
+      <div style="margin-top:12px;background:#111;border-radius:8px;padding:16px;position:relative;overflow:hidden;height:120px">
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.75);border-radius:8px"></div>
+        <div style="position:absolute;top:30px;left:50px;width:120px;height:36px;background:#5B8DEF;border-radius:6px;box-shadow:0 0 0 4px rgba(91,141,239,0.4),0 0 0 9999px rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:600;z-index:2">+ 添加考试</div>
+        <div style="position:absolute;top:76px;left:36px;background:#1e1e2e;border:1px solid #5B8DEF;border-radius:8px;padding:8px 12px;color:#e0e0ff;font-size:12px;z-index:3;white-space:nowrap">步骤 1/10 · 点击添加你的第一场考试 →</div>
+      </div>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>优点</h4><ul><li>视觉冲击强</li><li>引导清晰</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>遮挡整个页面</li><li>需精确计算元素位置</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>侧边引导面板</h3>
+      <p>右侧固定宽度面板显示当前步骤说明，目标元素用发光边框高亮。不遮挡主界面，用户可同时看到上下文。</p>
+      <div style="margin-top:12px;background:#111;border-radius:8px;padding:0;display:flex;height:120px;overflow:hidden">
+        <div style="flex:1;padding:12px;display:flex;flex-direction:column;gap:6px">
+          <div style="height:20px;background:#222;border-radius:4px;width:80%"></div>
+          <div style="height:14px;background:#222;border-radius:4px;width:60%"></div>
+          <div style="height:28px;background:#5B8DEF;border-radius:6px;width:90px;margin-top:4px;box-shadow:0 0 0 3px rgba(91,141,239,0.5);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">+ 添加考试</div>
+        </div>
+        <div style="width:160px;background:#1a1a2e;border-left:1px solid #5B8DEF;padding:10px;display:flex;flex-direction:column;gap:6px">
+          <div style="color:#a0a0ff;font-size:10px;font-weight:700">步骤 1 / 10</div>
+          <div style="color:#e0e0ff;font-size:11px;line-height:1.4">点击「添加考试」创建你的第一场考试</div>
+          <div style="margin-top:auto;display:flex;gap:6px">
+            <div style="flex:1;height:24px;background:#333;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#888;font-size:10px">跳过</div>
+            <div style="flex:1;height:24px;background:#5B8DEF;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px">下一步</div>
+          </div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>优点</h4><ul><li>不遮挡内容</li><li>定位实现简单</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>引导感稍弱</li><li>面板占用空间</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>底部步骤条 + 高亮脉冲</h3>
+      <p>页面底部固定进度条，目标元素用脉冲动画高亮（无遮罩）。最轻量，用户完全自由探索，同时知道当前在哪一步。</p>
+      <div style="margin-top:12px;background:#111;border-radius:8px;padding:12px;position:relative;height:120px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="height:20px;background:#222;border-radius:4px;width:80%"></div>
+          <div style="height:14px;background:#222;border-radius:4px;width:60%"></div>
+          <div style="height:28px;background:#5B8DEF;border-radius:6px;width:90px;animation:pulse 1.5s infinite;display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px">+ 添加考试</div>
+        </div>
+        <div style="position:absolute;bottom:0;left:0;right:0;background:#1a1a2e;border-top:1px solid #5B8DEF;border-radius:0 0 8px 8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+          <div style="color:#a0a0ff;font-size:10px;white-space:nowrap">步骤 1/10</div>
+          <div style="flex:1;height:4px;background:#333;border-radius:2px"><div style="width:10%;height:100%;background:#5B8DEF;border-radius:2px"></div></div>
+          <div style="color:#e0e0ff;font-size:10px;white-space:nowrap">点击高亮按钮</div>
+        </div>
+      </div>
+      <div class="pros-cons" style="margin-top:12px">
+        <div class="pros"><h4>优点</h4><ul><li>最不干扰</li><li>实现最简单</li></ul></div>
+        <div class="cons"><h4>缺点</h4><ul><li>引导感最弱</li><li>用户容易迷失</li></ul></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<style>
+@keyframes pulse {
+  0%,100%{box-shadow:0 0 0 0 rgba(91,141,239,0.6)}
+  50%{box-shadow:0 0 0 8px rgba(91,141,239,0)}
+}
+</style>
