@@ -338,9 +338,20 @@
       new RegExp(`^\\s*\\(?${escapeRegExp(itemNo)}\\)?[\\.)]\\s+`, 'm').test(content);
   }
 
+  function chunkMatchesSection(chunk, sectionNo) {
+    return chunk.sectionNo === sectionNo ||
+      (chunk.headingPath || []).join(' ').includes(sectionNo) ||
+      String(chunk.content || '').includes(sectionNo);
+  }
+
   function needsTargetedExcerpt(query, matches) {
     const hints = extractQueryHints(query || '');
     if (!hints.itemNo || !matches || !matches.length) return false;
+    if (hints.sectionNo) {
+      return !matches.some(match =>
+        chunkHasItem(match, hints.itemNo) && chunkMatchesSection(match, hints.sectionNo)
+      );
+    }
     return !matches.some(match => chunkHasItem(match, hints.itemNo));
   }
 
