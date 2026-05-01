@@ -234,8 +234,37 @@
     return chunks;
   }
 
+  const ZH_DIGIT = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9 };
+
+  function toArabic(str) {
+    const n = parseInt(str, 10);
+    if (!isNaN(n)) return String(n);
+    if (ZH_DIGIT[str] !== undefined) return String(ZH_DIGIT[str]);
+    if (str.startsWith('十') && ZH_DIGIT[str[1]] !== undefined) return String(10 + ZH_DIGIT[str[1]]);
+    if (str.length === 2 && str[1] === '十' && ZH_DIGIT[str[0]] !== undefined) return String(ZH_DIGIT[str[0]] * 10);
+    if (str.length === 3 && str[1] === '十' && ZH_DIGIT[str[0]] !== undefined && ZH_DIGIT[str[2]] !== undefined)
+      return String(ZH_DIGIT[str[0]] * 10 + ZH_DIGIT[str[2]]);
+    return str;
+  }
+
+  const FORMULA_REF_RE = /(?:公式|equation|formula|fig(?:ure)?|图|表|table|eq)[.\s(（]*\d+\.\d+/gi;
+  const ZH_CHAPTER_SECTION_RE = /第\s*([零一二三四五六七八九十\d]+)\s*章\s*第\s*([零一二三四五六七八九十\d]+)\s*节/i;
+  const EN_CHAPTER_SECTION_RE = /chapter\s+(\d+)\s+section\s+(\d+)/i;
+
   function extractQueryHints(query) {
-    const q = normalizeSpaces(query);
+    let q = normalizeSpaces(query);
+
+    // Strip formula/figure/table references so their X.Y numbers aren't mistaken for section numbers
+    q = q.replace(FORMULA_REF_RE, ' ');
+
+    // Normalize "第三章第四节" / "第3章第4节" → "3.4"
+    const zhMatch = q.match(ZH_CHAPTER_SECTION_RE);
+    if (zhMatch) q = q.replace(ZH_CHAPTER_SECTION_RE, toArabic(zhMatch[1]) + '.' + toArabic(zhMatch[2]));
+
+    // Normalize "chapter 3 section 4" → "3.4"
+    const enMatch = q.match(EN_CHAPTER_SECTION_RE);
+    if (enMatch) q = q.replace(EN_CHAPTER_SECTION_RE, enMatch[1] + '.' + enMatch[2]);
+
     const sectionNo = detectSection(q);
     const itemNo = detectItem(q);
     const pageNo = detectPage(q);

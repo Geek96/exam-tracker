@@ -251,3 +251,30 @@ See also Figure 3.4 for the phase portrait.
   assert.ok(ch2Chunk, 'expected a Chapter 2 chunk');
   assert.equal(ch2Chunk.sectionNo, '', 'sectionNo must not be set by equation (3.4) in content');
 });
+
+// ── 新增测试：改动 2 ──────────────────────────────────────────────────────
+
+test('extractQueryHints normalizes 第X章第Y节 (Chinese numerals) to X.Y', () => {
+  const h1 = extractQueryHints('第三章第四节第3题');
+  assert.equal(h1.sectionNo, '3.4', '第三章第四节 → 3.4');
+  assert.equal(h1.itemNo, '3');
+
+  const h2 = extractQueryHints('第3章第4节');
+  assert.equal(h2.sectionNo, '3.4', '第3章第4节 → 3.4');
+});
+
+test('extractQueryHints normalizes "chapter X section Y" to X.Y', () => {
+  const h = extractQueryHints('chapter 3 section 4 problem 3');
+  assert.equal(h.sectionNo, '3.4');
+  assert.equal(h.itemNo, '3');
+});
+
+test('extractQueryHints does not extract sectionNo from formula/figure references', () => {
+  assert.equal(extractQueryHints('公式(3.4)是什么意思').sectionNo, '', '公式(3.4) should not become sectionNo');
+  assert.equal(extractQueryHints('图3.4说明了什么').sectionNo,    '', '图3.4 should not become sectionNo');
+  assert.equal(extractQueryHints('equation (3.4) derivation').sectionNo, '', 'equation (3.4) should not become sectionNo');
+  assert.equal(extractQueryHints('figure 3.4 shows the curve').sectionNo, '', 'figure 3.4 should not become sectionNo');
+  // 真正的章节写法仍然有效
+  assert.equal(extractQueryHints('3.4节第3题').sectionNo, '3.4', '3.4节 still works');
+  assert.equal(extractQueryHints('Section 3.4 problem 3').sectionNo, '3.4', 'Section 3.4 still works');
+});
