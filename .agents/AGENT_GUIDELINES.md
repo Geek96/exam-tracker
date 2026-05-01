@@ -127,4 +127,5 @@
 - 使用语义化提交信息：`fix:`, `feat:`, `refactor:`, `docs:`, `chore:`
 - 每次提交后在 `SESSION_LOG.md` 追加一条记录 (时间精确到小时和分钟)
 - 不跳过 pre-commit hooks（不使用 `--no-verify`）
+- 涉及线上调试可见版本时，必须同步更新 `index.html` 左上角 `.app-version` 显示值、相关缓存参数（如 `course.js?v=N` / `material-rag.js?v=N`）以及 `STATUS.md` / `ROADMAP.md` / 本文件中的当前版本记录
 - 在 `STATUS.md` 的当前任务中追踪所完成任务(在完成任务后进行询问:接受, 拒绝, 修改三个选项) 1. 选择接受则将文件当前任务栏中删去任务.并在Roadmap.md里程碑中添加完成事项 并在superpower/plans的相关 md文件名前添加‘已完成’ 2. 拒绝则保留任务 3. 修改则让用户提出新的要求以修改当前任务目标
