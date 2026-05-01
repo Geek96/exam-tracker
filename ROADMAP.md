@@ -78,7 +78,7 @@
 - [x] `STATUS.md`：实时状态黑板
 - [x] `ROADMAP.md`（本文件）：项目路线图
 - [x] `CLAUDE.md`：会话启动自动加载指令
-- [x] JS 缓存破坏版本号机制（`course.js?v=N`，当前 v=40）
+- [x] JS 缓存破坏版本号机制（`course.js?v=N`，当前 v=41）
 
 ---
 
@@ -105,7 +105,7 @@
 
 ---
 
-## 当前能力全景（v=40）
+## 当前能力全景（v=41）
 
 | 模块 | 状态 |
 |---|---|
@@ -115,7 +115,7 @@
 | 课程资料管理 | ✅ |
 | PDF → Markdown（MinerU，含自动分片）| ✅ |
 | AI 学习助手（Gemini 流式）| ✅ |
-| AI 教材片段检索（Markdown）| ✅ 独立 IndexedDB 索引；检索为空时回退已选资料摘录，并给出可检索文件/章节选择 |
+| AI 教材片段检索（Markdown）| ✅ 独立 IndexedDB 索引；支持裸编号习题、目录降权和文档类型 metadata；检索为空时回退已选资料摘录，并给出可检索文件/章节选择 |
 | AI 回复保存为资料 | ✅ Markdown + KaTeX 预览 |
 | AI 学习助手（DeepSeek 流式）| 🟡 代码已预置，待 API Key 验证 |
 | AI 学习助手（Claude）| ⚪ UI 入口已存在，后端未接入 |

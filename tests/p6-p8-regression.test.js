@@ -32,6 +32,15 @@ test('P6 guards localStorage writes and caps chat sessions', () => {
   assert.match(welcomeSrc, /try\s*\{\s*localStorage\.setItem\('app_lang',\s*currentLang\)/);
 });
 
+test('main course management header exposes a quiet build version label', () => {
+  const html = read('index.html');
+  const css = read('styles.css');
+
+  assert.match(html, /<span class="app-version"[^>]*>v41<\/span>/);
+  assert.match(css, /\.app-version/);
+  assert.match(css, /opacity:\s*0\.55/);
+});
+
 test('P8 integrates a course-specific exam panel', () => {
   const js = read('course.js');
   const html = read('course.html');

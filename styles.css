@@ -115,6 +115,16 @@ body::after {
 
 .logo { display: flex; align-items: center; gap: 10px; }
 .logo-icon { font-size: 22px; }
+.app-version {
+  align-self: flex-end;
+  margin-left: -4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  opacity: 0.55;
+  letter-spacing: 0;
+}
 
 /* Gradient logo text */
 .logo-text {

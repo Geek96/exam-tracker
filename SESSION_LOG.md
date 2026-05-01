@@ -231,3 +231,16 @@
 - 要求 AI 先引导用户从可读取范围中选择，或用可检索标题/小节编号重新提问
 - 后端 system prompt 明确识别 `RAG 未命中` 上下文，避免回答“无法访问文件”
 - 更新回归测试并将 `course.js` 缓存版本升级到 `v=40`
+
+### RAG 习题级召回与版本标记
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `material-rag.js`, `index.html`, `styles.css`, `course.html`, `tests/material-rag.test.js`, `tests/p6-p8-regression.test.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 增强 Markdown RAG 分块：支持教材中常见的裸编号习题格式（如 `3.`、`3)`、`(3)`）
+- 为 chunk 增加 `docType`、`blockType`、`pageNo` metadata，为课本、slides、论文等资料类型兼容打基础
+- 对目录块进行降权，避免 `Table of Contents` 抢占具体习题正文召回结果
+- 在课程管理首页左上角增加低调 `v41` 版本标记，方便调试人员确认线上版本
+- 为 `material-rag.js` 增加缓存版本参数，并将 `course.js` 缓存版本升级到 `v=41`
