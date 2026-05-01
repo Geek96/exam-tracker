@@ -1386,6 +1386,19 @@ function persist() {
   if (idx !== -1) { courses[idx] = course; saveCourses(courses); }
 }
 
+function _reloadCourseExams() {
+  courseExams = loadExams();
+  updateExamNavCard();
+  renderCourseExams();
+}
+
+function _setCourseChapters(chs) {
+  course.chapters = chs;
+  persist();
+  renderChapters();
+  renderProgress();
+}
+
 let toastTimer;
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -2889,3 +2902,7 @@ if (typeof ResizeObserver !== 'undefined') {
 document.querySelectorAll('#aiWelcomeState .ai-quick-btn').forEach(btn => {
   btn.addEventListener('click', () => handleQuickAction(btn.dataset.promptType));
 });
+
+if (courseId === '__demo__' && typeof initDemoTour === 'function') {
+  initDemoTour().catch(e => console.warn('[DemoTour] init failed', e));
+}

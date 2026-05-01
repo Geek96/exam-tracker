@@ -47,6 +47,33 @@ function createCourse({ name, subject, color }) {
   };
 }
 
+function seedDemoCourse() {
+  const existing = loadCourses();
+  const lang = localStorage.getItem('app_lang') || 'zh';
+  const names = { zh: '线性代数 Demo', en: 'Linear Algebra Demo', es: 'Álgebra Lineal Demo' };
+  const subjects = { zh: '数学', en: 'Mathematics', es: 'Matemáticas' };
+  const current = existing.find(c => c.id === '__demo__');
+  if (current) {
+    current.name = names[lang] || names.zh;
+    current.subject = subjects[lang] || subjects.zh;
+    current.color = current.color || '#A78BFA';
+    saveCourses(existing);
+    return;
+  }
+  existing.push({
+    id: '__demo__',
+    name: names[lang] || names.zh,
+    subject: subjects[lang] || subjects.zh,
+    examDate: '',
+    totalTopics: 0,
+    completedTopics: 0,
+    color: '#A78BFA',
+    createdAt: Date.now(),
+    chapters: [],
+  });
+  saveCourses(existing);
+}
+
 // ── State ────────────────────────────────────────────────────────────────────
 
 let courses = loadCourses();
@@ -383,6 +410,8 @@ function initLangSwitcher() {
       }
       document.querySelectorAll('.lang-sw-btn').forEach(b => b.classList.toggle('active', b.dataset.lang === btn.dataset.lang));
       if (typeof applyStrings === 'function') applyStrings();
+      seedDemoCourse();
+      courses = loadCourses();
       render();
       renderUpcomingExams();
     });
@@ -391,6 +420,8 @@ function initLangSwitcher() {
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
+seedDemoCourse();
+courses = loadCourses();
 render();
 if (typeof applyStrings === 'function') applyStrings();
 renderUpcomingExams();

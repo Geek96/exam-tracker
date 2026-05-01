@@ -177,3 +177,18 @@
 - Task3: Persisted single-file MinerU material conversion task IDs and resume polling when returning to a course page.
 - Updated `course.js` cache version to `v=33` and added regression coverage for MinerU task resume hooks.
 - User accepted Task1/Task2/Task3; moved them to accepted status in `STATUS.md` and renamed the implementation plan with the `已完成-` prefix.
+
+### P9 Demo 引导流程
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `app.js`, `course.html`, `course.css`, `course.js`, `demo-tour.js`, `strings.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`
+
+**完成内容**:
+- 先提交用户已有 P9 范围澄清改动：`7335a59 docs: clarify p9 demo task scope`
+- 新增首页自动预置 `__demo__` 线性代数 Demo 课程，并随语言切换同步课程名/科目
+- 新增 Demo 课程 10 步侧边引导：创建考试、确认预填考试、查看章节、勾选章节、查看资料、选择 AI 可读 Markdown、发送预置问题、保存并预览 AI 回复
+- 新增预置 6 章节和一份线性代数 Markdown 资料，写入 IndexedDB 并生成本地检索 chunks
+- 新增 Demo 重置逻辑，清理 Demo 考试、会话、用户上传资料和资料选择，保留预置 Markdown
+- 新增 zh/en/es 三语 Demo 文案，`course.js` 缓存版本升级到 `v=37`
+- 新增 `tests/demo-tour-verification.js` 静态验证脚本，并通过 JS 语法检查

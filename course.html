@@ -572,6 +572,34 @@
     </div>
   </div>
 
+  <!-- Demo Tour Panel -->
+  <div class="demo-tour-panel" id="demoTourPanel" style="display:none">
+    <div class="dtp-header">
+      <div class="dtp-step-indicator">
+        <div class="dtp-step-circle" id="dtpStepCircle">1</div>
+        <span class="dtp-step-label" id="dtpStepLabel"></span>
+      </div>
+      <div class="dtp-progress-bar">
+        <div class="dtp-progress-fill" id="dtpProgressFill" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="dtp-body">
+      <div class="dtp-title" id="dtpTitle"></div>
+      <div class="dtp-desc" id="dtpDesc"></div>
+      <div class="dtp-extra" id="dtpExtra"></div>
+    </div>
+    <div class="dtp-footer">
+      <button class="dtp-skip-btn" id="dtpSkipBtn" type="button"></button>
+      <button class="dtp-next-btn" id="dtpNextBtn" type="button" style="display:none"></button>
+      <hr class="dtp-divider" />
+      <button class="dtp-reset-btn" id="dtpResetBtn" type="button"></button>
+    </div>
+  </div>
+
+  <div class="demo-restart-banner" id="demoRestartBanner" style="display:none">
+    <button id="demoRestartBtn" type="button"></button>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -581,6 +609,7 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
   <script src="strings.js"></script>
   <script src="material-rag.js"></script>
-  <script src="course.js?v=36"></script>
+  <script src="demo-tour.js"></script>
+  <script src="course.js?v=37"></script>
 </body>
 </html>
