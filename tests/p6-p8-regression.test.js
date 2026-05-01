@@ -163,13 +163,24 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.ok(materialScriptIndex > -1, 'course.html should load material-rag.js');
   assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
   assert.match(src, /async function loadRetrievedMaterialContext\(query\)/);
+  assert.match(src, /async function loadSelectedMarkdownExcerptContext\(\)/);
+  assert.match(src, /await Promise\.all\(selectedMdFiles\.map\(f => ensureChunksForMaterial\(f\)\)\)/);
   assert.match(src, /MaterialRAG\.rankMaterialChunks\(query,\s*chunks,\s*6\)/);
   assert.match(src, /MaterialRAG\.formatRetrievedContext\(matches\)/);
 
   const doSend = src.match(/async function doSend\(\) \{[\s\S]*?\n\}/)?.[0] || '';
   assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
+  assert.match(doSend, /const fallbackMdCtx = mdCtx \? '' : await loadSelectedMarkdownExcerptContext\(\)/);
+  assert.match(doSend, /if \(mdCtx \|\| fallbackMdCtx\) apiContent = text \+ '\s*\\n\\n' \+ \(mdCtx \|\| fallbackMdCtx\)/);
   assert.doesNotMatch(doSend, /aiConversation\.length === 0/);
   assert.match(doSend, /await sendAIMsg\(text,\s*text,\s*apiContent\)/);
+});
+
+test('AI system prompt acknowledges injected local markdown materials', () => {
+  const api = read('api/study-plan.js');
+
+  assert.match(api, /课程资料上下文由前端从用户已选中的本地 Markdown 文件注入/);
+  assert.match(api, /不得声称自己无法访问已选课程资料/);
 });
 
 test('Saved AI answers become markdown materials with rendered preview support', () => {
@@ -188,7 +199,7 @@ test('Saved AI answers become markdown materials with rendered preview support',
 
   assert.match(html, /id="textEditPreviewToggle"/);
   assert.match(html, /id="textEditPreview"/);
-  assert.match(html, /course\.js\?v=36/);
+  assert.match(html, /course\.js\?v=\d+/);
 
   assert.match(css, /\.text-edit-preview/);
   assert.equal((strings.match(/previewMarkdown:/g) || []).length, 3);

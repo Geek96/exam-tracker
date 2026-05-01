@@ -206,3 +206,16 @@
 - Demo 初始化时同时写入两份 Markdown 资料：学习指南和原 PDF OCR 摘录
 - Demo 重置时保留这两份预置资料，清理其他 Demo 用户资料和旧版单文件种子
 - 更新静态验证脚本，覆盖双文件种子、外部 Markdown 加载和 `course.js?v=38`
+
+### AI 已选 Markdown 资料上下文回退修复
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `course.js`, `api/study-plan.js`, `course.html`, `tests/p6-p8-regression.test.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 定位根因：自由提问只注入 RAG 检索片段，检索未命中或索引未完成时后端收到裸问题，模型会误称无法读取用户已选资料
+- 在自由提问前同步确保已选 Markdown 文件建索引
+- 当检索结果为空时，回退注入已选 Markdown 文件正文摘录（每文件/总量限额），保证模型可见资料内容
+- 强化后端 system prompt：当用户消息包含课程资料上下文时，不得声称无法访问已选课程资料
+- 更新回归测试并将 `course.js` 缓存版本升级到 `v=39`

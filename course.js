@@ -2192,12 +2192,11 @@ async function loadRetrievedMaterialContext(query) {
   if (!window.MaterialRAG) return '';
   try {
     const all = await dbGetAll();
-    const selectedMdIds = new Set(
-      all
-        .filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'))
-        .filter(f => selectedFiles.size === 0 || selectedFiles.has(f.id))
-        .map(f => f.id)
-    );
+    const selectedMdFiles = all
+      .filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'))
+      .filter(f => selectedFiles.size === 0 || selectedFiles.has(f.id));
+    await Promise.all(selectedMdFiles.map(f => ensureChunksForMaterial(f)));
+    const selectedMdIds = new Set(selectedMdFiles.map(f => f.id));
     if (!selectedMdIds.size) return '';
 
     const chunks = (await dbGetChunksForCourse(courseId))
@@ -2206,6 +2205,39 @@ async function loadRetrievedMaterialContext(query) {
     return MaterialRAG.formatRetrievedContext(matches);
   } catch (e) {
     console.warn('[ExamTracker] material retrieval failed', e);
+    return '';
+  }
+}
+
+async function loadSelectedMarkdownExcerptContext() {
+  try {
+    const all = await dbGetAll();
+    const mds = all
+      .filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'))
+      .filter(f => selectedFiles.size === 0 || selectedFiles.has(f.id));
+    if (!mds.length) return '';
+
+    const fileList = mds.map(f => f.name).join('、');
+    const PER_FILE = 20000;
+    const TOTAL_CAP = 60000;
+    let total = 0;
+    const bodies = [];
+
+    for (const f of mds) {
+      if (total >= TOTAL_CAP) break;
+      const text = new TextDecoder().decode(f.data || new ArrayBuffer(0));
+      const allowed = Math.min(PER_FILE, TOTAL_CAP - total);
+      const chunk = text.slice(0, allowed);
+      const truncated = chunk.length < text.length;
+      bodies.push(
+        `--- 文件：${f.name}${truncated ? `（节选前 ${chunk.length} 字符，共 ${text.length} 字符）` : ''} ---\n${chunk}`
+      );
+      total += chunk.length;
+    }
+
+    return `课程资料全文摘录（AI 已可读取这些已选 Markdown 文件：${fileList}）。请优先依据以下资料回答；如果资料中没有答案，再明确说明缺失内容：\n${bodies.join('\n\n')}`;
+  } catch (e) {
+    console.warn('[ExamTracker] selected material fallback failed', e);
     return '';
   }
 }
@@ -2500,7 +2532,8 @@ async function doSend() {
   // Retrieve relevant material snippets for every API turn, while keeping history lean.
   let apiContent = text;
   const mdCtx = await loadRetrievedMaterialContext(text);
-  if (mdCtx) apiContent = text + '\n\n' + mdCtx;
+  const fallbackMdCtx = mdCtx ? '' : await loadSelectedMarkdownExcerptContext();
+  if (mdCtx || fallbackMdCtx) apiContent = text + '\n\n' + (mdCtx || fallbackMdCtx);
   await sendAIMsg(text, text, apiContent);
 }
 document.getElementById('aiChatSend').addEventListener('click', doSend);
