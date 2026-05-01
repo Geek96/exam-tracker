@@ -3,6 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.MaterialRAG = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window, function () {
+  const INDEX_VERSION = 42;
   const HEADING_RE = /^(#{1,6})\s+(.+)\s*$/;
   const SECTION_RE = /(?:^|\b|§|第\s*)(\d+(?:\.\d+)+)\s*(?:节|section)?/i;
   const CHAPTER_RE = /(?:chapter|第)\s*(\d+)\s*(?:章)?/i;
@@ -34,6 +35,32 @@
   function detectPage(text) {
     const match = String(text || '').match(PAGE_RE);
     return match ? (match[1] || match[2] || '') : '';
+  }
+
+  function escapeRegExp(s) {
+    return String(s || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function collectRegexPositions(text, regex) {
+    const positions = [];
+    let match;
+    regex.lastIndex = 0;
+    while ((match = regex.exec(text)) && positions.length < 80) {
+      positions.push(match.index);
+      if (match.index === regex.lastIndex) regex.lastIndex++;
+    }
+    return positions;
+  }
+
+  function lineAround(text, index) {
+    const start = Math.max(0, text.lastIndexOf('\n', index - 1) + 1);
+    const endAt = text.indexOf('\n', index);
+    const end = endAt === -1 ? text.length : endAt;
+    return text.slice(start, end);
+  }
+
+  function isLikelyTocLine(line) {
+    return /\b(table of contents|contents)\b/i.test(line) || /\.{3,}/.test(line);
   }
 
   function inferDocType(fileName, text) {
@@ -155,6 +182,7 @@
           const itemNo = detectItem(part);
           chunks.push({
             id: `${fileId || fileName || 'file'}::${chunkIndex}`,
+            indexVersion: INDEX_VERSION,
             courseId,
             fileId,
             fileName,
@@ -194,13 +222,68 @@
     const q = normalizeSpaces(query);
     const sectionNo = detectSection(q);
     const itemNo = detectItem(q);
+    const pageNo = detectPage(q);
     const keywords = q
       .replace(SECTION_RE, ' ')
       .replace(ITEM_RE, ' ')
+      .replace(PAGE_RE, ' ')
       .split(/[\s,，。；;:：!?？()（）]+/)
       .map(s => s.trim().toLowerCase())
       .filter(s => s && s.length > 1 && !STOP_WORDS.has(s));
-    return { sectionNo, itemNo, keywords };
+    return { sectionNo, itemNo, pageNo, keywords };
+  }
+
+  function buildTargetedExcerpt(text, query, opts = {}) {
+    const source = String(text || '');
+    const maxChars = opts.maxChars || 28000;
+    const beforeChars = opts.beforeChars || 2500;
+    const hints = extractQueryHints(query || '');
+    const candidates = [];
+
+    function addCandidate(index, score, reason) {
+      if (index < 0 || index >= source.length) return;
+      const line = lineAround(source, index);
+      const adjustedScore = score - (isLikelyTocLine(line) ? 120 : 0) + (index > 20000 ? 15 : 0);
+      candidates.push({ index, score: adjustedScore, reason });
+    }
+
+    if (hints.sectionNo) {
+      const sectionRe = new RegExp(escapeRegExp(hints.sectionNo), 'g');
+      for (const pos of collectRegexPositions(source, sectionRe)) {
+        const line = lineAround(source, pos);
+        addCandidate(pos, /^#{1,6}\s+/.test(line) ? 120 : 70, 'section');
+      }
+    }
+
+    if (hints.pageNo) {
+      const pageRe = new RegExp(`(?:page|p\\.)\\s*\\.?\\s*${escapeRegExp(hints.pageNo)}\\b|第\\s*${escapeRegExp(hints.pageNo)}\\s*页`, 'gi');
+      for (const pos of collectRegexPositions(source, pageRe)) addCandidate(pos, 65, 'page');
+    }
+
+    candidates.sort((a, b) => b.score - a.score || a.index - b.index);
+    let anchor = candidates[0] || { index: 0, reason: 'prefix' };
+
+    if (hints.itemNo) {
+      const itemRe = new RegExp(`(?:exercise|problem|习题|题目|第)\\s*\\.?\\s*${escapeRegExp(hints.itemNo)}\\s*(?:题)?|^\\s*\\(?${escapeRegExp(hints.itemNo)}\\)?[\\.)]\\s+`, 'gim');
+      const searchStart = Math.max(0, anchor.index);
+      const searchEnd = Math.min(source.length, searchStart + 90000);
+      const local = source.slice(searchStart, searchEnd);
+      const localPositions = collectRegexPositions(local, itemRe);
+      if (localPositions.length) {
+        anchor = { index: searchStart + localPositions[0], reason: 'item' };
+      }
+    }
+
+    const start = Math.max(0, anchor.index - beforeChars);
+    const end = Math.min(source.length, start + maxChars);
+    return {
+      text: source.slice(start, end),
+      start,
+      end,
+      reason: anchor.reason,
+      truncatedBefore: start > 0,
+      truncatedAfter: end < source.length,
+    };
   }
 
   function scoreChunk(hints, chunk) {
@@ -246,8 +329,10 @@
   }
 
   return {
+    INDEX_VERSION,
     chunkMarkdownMaterial,
     extractQueryHints,
+    buildTargetedExcerpt,
     rankMaterialChunks,
     formatRetrievedContext,
   };

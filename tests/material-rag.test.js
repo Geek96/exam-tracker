@@ -2,8 +2,10 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  INDEX_VERSION,
   chunkMarkdownMaterial,
   extractQueryHints,
+  buildTargetedExcerpt,
   rankMaterialChunks,
   formatRetrievedContext,
 } = require('../material-rag.js');
@@ -51,6 +53,30 @@ Find a fundamental set of solutions and write the general solution.
 4. Solve y'' - y = 0.
 `;
 
+const longTextbookMarkdown = `# Table of Contents
+
+3.4 Systems of Linear Equations--Computational Aspects .......... 181
+
+# Chapter 1
+
+${'introductory material '.repeat(1600)}
+
+# Chapter 3
+
+## 3.4 Systems of Linear Equations--Computational Aspects
+
+This section starts on page 181 and discusses computation.
+
+### Exercises
+
+1. First exercise.
+
+2. Second exercise.
+
+3. Use Gaussian elimination to solve the augmented matrix.
+This is the exercise body that appears far beyond the first excerpt window.
+`;
+
 test('chunkMarkdownMaterial preserves headings and detects textbook identifiers', () => {
   const chunks = chunkMarkdownMaterial({
     fileId: 'file1',
@@ -61,6 +87,7 @@ test('chunkMarkdownMaterial preserves headings and detects textbook identifiers'
 
   const target = chunks.find(c => c.sectionNo === '3.4' && c.itemNo === '3');
   assert.ok(target, 'expected a chunk for section 3.4 exercise 3');
+  assert.equal(target.indexVersion, INDEX_VERSION);
   assert.equal(target.fileName, 'ode.md');
   assert.deepEqual(target.headingPath, ['Chapter 3 Differential Equations', '3.4 Linear Equations', 'Exercises']);
   assert.match(target.content, /Exercise 3/);
@@ -71,8 +98,14 @@ test('extractQueryHints recognizes section and exercise references', () => {
   assert.deepEqual(extractQueryHints('帮我解 3.4 第 3 题'), {
     sectionNo: '3.4',
     itemNo: '3',
+    pageNo: '',
     keywords: ['帮我解'],
   });
+});
+
+test('extractQueryHints recognizes page references without confusing exercise numbers', () => {
+  assert.equal(extractQueryHints('第 181 页之后 3.4 节第 3 题').pageNo, '181');
+  assert.equal(extractQueryHints('帮我解 3.4 第 3 题').pageNo, '');
 });
 
 test('rankMaterialChunks prefers exact section and exercise matches', () => {
@@ -110,6 +143,18 @@ test('bare numbered textbook exercises are chunked and ranked above table of con
   assert.equal(matches[0].blockType, 'exercise');
   assert.doesNotMatch(matches[0].content, /Table of Contents/);
   assert.match(matches[0].content, /4y' \+ 4y/);
+});
+
+test('buildTargetedExcerpt uses section and exercise hints instead of the file prefix', () => {
+  const excerpt = buildTargetedExcerpt(longTextbookMarkdown, '帮我解第 181 页之后 3.4 节第 3 题', {
+    maxChars: 12000,
+    beforeChars: 800,
+  });
+
+  assert.match(excerpt.text, /3\.4 Systems of Linear Equations/);
+  assert.match(excerpt.text, /Gaussian elimination/);
+  assert.doesNotMatch(excerpt.text, /Table of Contents/);
+  assert.ok(excerpt.start > 20000, 'expected targeted excerpt to come from later in the document');
 });
 
 test('formatRetrievedContext includes source metadata and snippets', () => {

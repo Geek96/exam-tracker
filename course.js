@@ -1685,7 +1685,8 @@ async function ensureChunksForMaterial(f) {
   const isMarkdown = (f.name || '').toLowerCase().endsWith('.md') || f.type === 'text/markdown';
   if (!isMarkdown || !f.data) return;
   const existing = await dbGetChunksForCourse(courseId).catch(() => []);
-  if (existing.some(c => c.fileId === f.id)) return;
+  const existingForFile = existing.filter(c => c.fileId === f.id);
+  if (existingForFile.length && existingForFile.every(c => c.indexVersion === MaterialRAG.INDEX_VERSION)) return;
   const text = new TextDecoder().decode(f.data);
   const chunks = MaterialRAG.chunkMarkdownMaterial({
     fileId: f.id,
@@ -2231,7 +2232,7 @@ function summarizeAvailableMaterialChoices(chunks, files) {
   return lines.join('\n');
 }
 
-async function loadSelectedMarkdownExcerptContext() {
+async function loadSelectedMarkdownExcerptContext(query) {
   try {
     const all = await dbGetAll();
     const mds = all
@@ -2245,19 +2246,30 @@ async function loadSelectedMarkdownExcerptContext() {
       .filter(c => selectedMdIds.has(c.fileId));
     const readableChoices = summarizeAvailableMaterialChoices(chunks, mds) ||
       mds.map(f => `- ${f.name}`).join('\n');
-    const PER_FILE = 20000;
-    const TOTAL_CAP = 60000;
+    const PER_FILE = 28000;
+    const TOTAL_CAP = 84000;
     let total = 0;
     const bodies = [];
 
     for (const f of mds) {
       if (total >= TOTAL_CAP) break;
       const text = new TextDecoder().decode(f.data || new ArrayBuffer(0));
-      const allowed = Math.min(PER_FILE, TOTAL_CAP - total);
-      const chunk = text.slice(0, allowed);
-      const truncated = chunk.length < text.length;
+      const excerpt = window.MaterialRAG && MaterialRAG.buildTargetedExcerpt
+        ? MaterialRAG.buildTargetedExcerpt(text, query, {
+            maxChars: Math.min(PER_FILE, TOTAL_CAP - total),
+            beforeChars: 2500,
+          })
+        : {
+            text: text.slice(0, Math.min(PER_FILE, TOTAL_CAP - total)),
+            start: 0,
+            end: Math.min(PER_FILE, TOTAL_CAP - total, text.length),
+            truncatedBefore: false,
+            truncatedAfter: Math.min(PER_FILE, TOTAL_CAP - total) < text.length,
+          };
+      const chunk = excerpt.text;
+      const truncated = excerpt.truncatedBefore || excerpt.truncatedAfter;
       bodies.push(
-        `--- 文件：${f.name}${truncated ? `（节选前 ${chunk.length} 字符，共 ${text.length} 字符）` : ''} ---\n${chunk}`
+        `--- 文件：${f.name}${truncated ? `（课程资料相关摘录：字符 ${excerpt.start + 1}-${excerpt.end}，共 ${text.length} 字符）` : ''} ---\n${chunk}`
       );
       total += chunk.length;
     }
@@ -2269,7 +2281,7 @@ ${readableChoices}
 
 请先引导用户从上面的文件、章节或小节中选择，或建议用户用这些章节标题/小节编号重新提问；如果仍可从下面摘录回答，请说明依据并给出可确定的部分。
 
-课程资料全文摘录（AI 已可读取这些已选 Markdown 文件：${fileList}）。请优先依据以下资料回答；如果资料中没有答案，再明确说明缺失内容：
+课程资料相关摘录（AI 已可读取这些已选 Markdown 文件：${fileList}）。请优先依据以下资料回答；如果资料中没有答案，再明确说明缺失内容：
 ${bodies.join('\n\n')}`;
   } catch (e) {
     console.warn('[ExamTracker] selected material fallback failed', e);
@@ -2567,7 +2579,7 @@ async function doSend() {
   // Retrieve relevant material snippets for every API turn, while keeping history lean.
   let apiContent = text;
   const mdCtx = await loadRetrievedMaterialContext(text);
-  const fallbackMdCtx = mdCtx ? '' : await loadSelectedMarkdownExcerptContext();
+  const fallbackMdCtx = mdCtx ? '' : await loadSelectedMarkdownExcerptContext(text);
   if (mdCtx || fallbackMdCtx) apiContent = text + '\n\n' + (mdCtx || fallbackMdCtx);
   await sendAIMsg(text, text, apiContent);
 }

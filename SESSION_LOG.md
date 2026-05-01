@@ -254,3 +254,16 @@
 **完成内容**:
 - 在提交规范中加入调试版本号同步要求
 - 明确涉及线上调试可见版本时，需要同步更新首页 `.app-version`、相关缓存参数和状态文档版本记录
+
+### RAG 目标摘录与索引重建修复
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `material-rag.js`, `course.js`, `course.html`, `index.html`, `tests/material-rag.test.js`, `tests/p6-p8-regression.test.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 定位根因：浏览器中已有的旧 IndexedDB chunks 没有按新 RAG 规则重建，且 RAG 未命中时 fallback 只截取每个 Markdown 文件开头
+- 为 RAG chunks 增加 `INDEX_VERSION`，当已存 chunks 版本落后时自动重建索引
+- 新增 `buildTargetedExcerpt()`，按用户问题中的页码、章节号和题号从全文 Markdown 中定位相关摘录
+- 自由提问 fallback 改为注入“课程资料相关摘录”，避免大文件只暴露目录、前言和第 1.1 节开头
+- 同步首页调试版本号和缓存参数到 `v42`

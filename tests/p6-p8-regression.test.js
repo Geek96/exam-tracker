@@ -36,7 +36,7 @@ test('main course management header exposes a quiet build version label', () => 
   const html = read('index.html');
   const css = read('styles.css');
 
-  assert.match(html, /<span class="app-version"[^>]*>v41<\/span>/);
+  assert.match(html, /<span class="app-version"[^>]*>v42<\/span>/);
   assert.match(css, /\.app-version/);
   assert.match(css, /opacity:\s*0\.55/);
 });
@@ -151,6 +151,7 @@ test('Navigation storage fix avoids blocking the materials database upgrade path
 
 test('Material chunks are persisted and deleted with source materials', () => {
   const src = read('course.js');
+  const rag = read('material-rag.js');
 
   assert.match(src, /indexedDB\.open\('examTrackerMaterialChunks',\s*1\)/);
   assert.match(src, /createObjectStore\('materialChunks'/);
@@ -161,6 +162,8 @@ test('Material chunks are persisted and deleted with source materials', () => {
   assert.match(src, /async function ensureChunksForMaterial\(f\)/);
   assert.match(src, /await dbDeleteChunksForFile\(f\.id\)/);
   assert.match(src, /MaterialRAG\.chunkMarkdownMaterial/);
+  assert.match(rag, /INDEX_VERSION/);
+  assert.match(src, /c\.indexVersion === MaterialRAG\.INDEX_VERSION/);
 });
 
 test('AI free-form chat retrieves relevant material chunks on every turn', () => {
@@ -172,7 +175,7 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.ok(materialScriptIndex > -1, 'course.html should load material-rag.js');
   assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
   assert.match(src, /async function loadRetrievedMaterialContext\(query\)/);
-  assert.match(src, /async function loadSelectedMarkdownExcerptContext\(\)/);
+  assert.match(src, /async function loadSelectedMarkdownExcerptContext\(query\)/);
   assert.match(src, /function summarizeAvailableMaterialChoices\(chunks,\s*files\)/);
   assert.match(src, /await Promise\.all\(selectedMdFiles\.map\(f => ensureChunksForMaterial\(f\)\)\)/);
   assert.match(src, /MaterialRAG\.rankMaterialChunks\(query,\s*chunks,\s*6\)/);
@@ -183,10 +186,19 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
 
   const doSend = src.match(/async function doSend\(\) \{[\s\S]*?\n\}/)?.[0] || '';
   assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
-  assert.match(doSend, /const fallbackMdCtx = mdCtx \? '' : await loadSelectedMarkdownExcerptContext\(\)/);
+  assert.match(doSend, /const fallbackMdCtx = mdCtx \? '' : await loadSelectedMarkdownExcerptContext\(text\)/);
   assert.match(doSend, /if \(mdCtx \|\| fallbackMdCtx\) apiContent = text \+ '\s*\\n\\n' \+ \(mdCtx \|\| fallbackMdCtx\)/);
   assert.doesNotMatch(doSend, /aiConversation\.length === 0/);
   assert.match(doSend, /await sendAIMsg\(text,\s*text,\s*apiContent\)/);
+});
+
+test('AI fallback excerpt targets the requested section instead of only the file prefix', () => {
+  const src = read('course.js');
+
+  assert.match(src, /async function loadSelectedMarkdownExcerptContext\(query\)/);
+  assert.match(src, /MaterialRAG\.buildTargetedExcerpt\(text,\s*query/);
+  assert.match(src, /课程资料相关摘录/);
+  assert.doesNotMatch(src, /节选前 \$\{chunk\.length\} 字符/);
 });
 
 test('AI system prompt acknowledges injected local markdown materials', () => {
