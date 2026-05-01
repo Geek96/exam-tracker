@@ -4,6 +4,15 @@
 
 ## 2026-05-01
 
+### 17:00 EDT — extractQueryHints 查询归一化修复（Tasks 3+4）
+
+**操作者**: Claude Sonnet 4.6
+
+- 在 `tests/material-rag.test.js` 末尾追加三个失败测试（改动 2）：中文章节归一化、英文 chapter/section 归一化、公式/图引用屏蔽。
+- 在 `material-rag.js` 中 `extractQueryHints` 之前插入 `ZH_DIGIT` / `toArabic` / `FORMULA_REF_RE` / `ZH_CHAPTER_SECTION_RE` / `EN_CHAPTER_SECTION_RE`，并重写函数体实现归一化逻辑。
+- 全部 13 个测试通过（0 失败）。
+- Commit: `5a2dd7b` — `fix: normalize query section forms and strip formula/figure refs`
+
 ### 15:13 EDT — GPT-5.5 会话切换记录
 
 **操作者**: Codex (GPT-5.5)
