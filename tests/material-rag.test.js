@@ -261,6 +261,9 @@ test('extractQueryHints normalizes 第X章第Y节 (Chinese numerals) to X.Y', ()
 
   const h2 = extractQueryHints('第3章第4节');
   assert.equal(h2.sectionNo, '3.4', '第3章第4节 → 3.4');
+
+  const h3 = extractQueryHints('第十章第二节');
+  assert.equal(h3.sectionNo, '10.2', '第十章第二节 → 10.2');
 });
 
 test('extractQueryHints normalizes "chapter X section Y" to X.Y', () => {

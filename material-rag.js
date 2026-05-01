@@ -240,6 +240,7 @@
     const n = parseInt(str, 10);
     if (!isNaN(n)) return String(n);
     if (ZH_DIGIT[str] !== undefined) return String(ZH_DIGIT[str]);
+    if (str === '十') return '10';
     if (str.startsWith('十') && ZH_DIGIT[str[1]] !== undefined) return String(10 + ZH_DIGIT[str[1]]);
     if (str.length === 2 && str[1] === '十' && ZH_DIGIT[str[0]] !== undefined) return String(ZH_DIGIT[str[0]] * 10);
     if (str.length === 3 && str[1] === '十' && ZH_DIGIT[str[0]] !== undefined && ZH_DIGIT[str[2]] !== undefined)
