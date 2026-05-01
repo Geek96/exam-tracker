@@ -279,3 +279,15 @@
 - 从目录行提取章节标题，并在目录后方搜索同名正文标题作为更高优先级锚点
 - 增加回归测试覆盖“TOC 有 3.4 编号，正文标题无编号”的转换结果
 - 将 RAG 索引版本、缓存参数和首页调试版本同步到 `v43`
+
+### RAG 低置信度题号补充
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `material-rag.js`, `course.js`, `course.html`, `index.html`, `tests/material-rag.test.js`, `tests/p6-p8-regression.test.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 定位根因：RAG 返回章节片段时不会触发 fallback，但这些片段可能只包含目录和概念解释，缺少用户请求的具体题号
+- 新增 `needsTargetedExcerpt()`，当用户询问具体题号且已返回片段不含该题号时判定为低置信度命中
+- 自由提问在低置信度命中时追加“RAG 题号补充摘录”，从已选 Markdown 全文按页码、章节号或题号定位正文
+- 将 RAG 索引版本、缓存参数和首页调试版本同步到 `v44`

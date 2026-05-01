@@ -36,7 +36,7 @@ test('main course management header exposes a quiet build version label', () => 
   const html = read('index.html');
   const css = read('styles.css');
 
-  assert.match(html, /<span class="app-version"[^>]*>v43<\/span>/);
+  assert.match(html, /<span class="app-version"[^>]*>v44<\/span>/);
   assert.match(css, /\.app-version/);
   assert.match(css, /opacity:\s*0\.55/);
 });
@@ -180,6 +180,8 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.match(src, /await Promise\.all\(selectedMdFiles\.map\(f => ensureChunksForMaterial\(f\)\)\)/);
   assert.match(src, /MaterialRAG\.rankMaterialChunks\(query,\s*chunks,\s*6\)/);
   assert.match(src, /MaterialRAG\.formatRetrievedContext\(matches\)/);
+  assert.match(src, /MaterialRAG\.needsTargetedExcerpt\(query,\s*matches\)/);
+  assert.match(src, /buildTargetedMaterialExcerptContext\(query,\s*selectedMdFiles/);
   assert.match(src, /RAG 未命中/);
   assert.match(src, /可以检索到的资料范围/);
   assert.match(src, /请先引导用户从上面的文件、章节或小节中选择/);

@@ -4,8 +4,8 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-05-01
-**当前版本**: `course.js?v=43`
-**部署状态**: ⏳ v43 本地完成，待推送后由 Vercel 部署
+**当前版本**: `course.js?v=44`
+**部署状态**: ⏳ v44 本地完成，待推送后由 Vercel 部署
 
 ---
 
@@ -24,7 +24,7 @@
 | PDF → Markdown（MinerU）| ✅ 正常 | 支持 > 199 页自动分片；单文件任务返回课程页后可恢复轮询 |
 | AI 学习助手（Gemini）| ✅ 正常 | 模型链：gemini-3-flash-preview → gemini-2.5-flash |
 | AI 可读资料选择 | ✅ 正常 | 助手顶部文件下拉选择器 |
-| AI 教材片段检索 | ✅ 正常 | Markdown 教材自动分块；支持索引版本自动重建、目录标题跳转正文、裸编号习题识别、目录降权、章节/题号优先召回，检索为空时按问题定位相关摘录 |
+| AI 教材片段检索 | ✅ 正常 | Markdown 教材自动分块；支持索引版本自动重建、目录标题跳转正文、裸编号习题识别、低置信度题号补充摘录，检索为空时按问题定位相关摘录 |
 | AI 回复保存为资料 | ✅ 正常 | 保存为 Markdown；资料查看支持 Markdown + KaTeX 预览 |
 | AI 学习助手（DeepSeek）| 🟡 代码已预置 | 暂缺 API Key，待配置后验证 |
 | AI 学习助手（Claude）| ⚪ 未实现 | UI 入口已存在，后端待接入 |
@@ -62,10 +62,10 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  fix: follow toc titles to body excerpts
+本次工作  fix: supplement low-confidence rag matches
+1b3510e  fix: follow toc titles to body excerpts
 519ff3d  fix: target material fallback excerpts
 333c423  docs: require visible version sync in commits
-81ffe84  feat: improve material rag exercise retrieval
 ```
 
 ---
@@ -75,7 +75,7 @@
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
-| P10 | RAG 结构化索引与习题级召回 | 🟢 本地完成，待验收 | v=43 | `material-rag.js` 目录标题跳转正文、索引版本自动重建、裸编号习题识别、目标章节摘录 |
+| P10 | RAG 结构化索引与习题级召回 | 🟢 本地完成，待验收 | v=44 | `material-rag.js` 低置信度题号补充摘录、目录标题跳转正文、索引版本自动重建 |
 
 ### 已验收完成
 

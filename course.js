@@ -2203,11 +2203,41 @@ async function loadRetrievedMaterialContext(query) {
     const chunks = (await dbGetChunksForCourse(courseId))
       .filter(c => selectedMdIds.has(c.fileId));
     const matches = MaterialRAG.rankMaterialChunks(query, chunks, 6);
-    return MaterialRAG.formatRetrievedContext(matches);
+    const retrievedContext = MaterialRAG.formatRetrievedContext(matches);
+    const targetedContext = MaterialRAG.needsTargetedExcerpt(query, matches)
+      ? await buildTargetedMaterialExcerptContext(query, selectedMdFiles, 'RAG 题号补充摘录')
+      : '';
+    return [retrievedContext, targetedContext].filter(Boolean).join('\n\n');
   } catch (e) {
     console.warn('[ExamTracker] material retrieval failed', e);
     return '';
   }
+}
+
+async function buildTargetedMaterialExcerptContext(query, files, label) {
+  if (!window.MaterialRAG || !MaterialRAG.buildTargetedExcerpt || !files.length) return '';
+  const PER_FILE = 28000;
+  const TOTAL_CAP = 84000;
+  let total = 0;
+  const bodies = [];
+
+  for (const f of files) {
+    if (total >= TOTAL_CAP) break;
+    const text = new TextDecoder().decode(f.data || new ArrayBuffer(0));
+    const excerpt = MaterialRAG.buildTargetedExcerpt(text, query, {
+      maxChars: Math.min(PER_FILE, TOTAL_CAP - total),
+      beforeChars: 2500,
+    });
+    if (!excerpt.text) continue;
+    const truncated = excerpt.truncatedBefore || excerpt.truncatedAfter;
+    bodies.push(
+      `--- 文件：${f.name}${truncated ? `（${label}：字符 ${excerpt.start + 1}-${excerpt.end}，共 ${text.length} 字符）` : ''} ---\n${excerpt.text}`
+    );
+    total += excerpt.text.length;
+  }
+
+  if (!bodies.length) return '';
+  return `${label}：RAG 已返回章节相关片段，但未命中用户请求的具体题号。以下摘录直接从已选 Markdown 全文按页码、章节号或题号定位，请优先检查其中是否包含题目正文：\n${bodies.join('\n\n')}`;
 }
 
 function summarizeAvailableMaterialChoices(chunks, files) {

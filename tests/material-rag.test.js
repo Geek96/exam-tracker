@@ -6,6 +6,7 @@ const {
   chunkMarkdownMaterial,
   extractQueryHints,
   buildTargetedExcerpt,
+  needsTargetedExcerpt,
   rankMaterialChunks,
   formatRetrievedContext,
 } = require('../material-rag.js');
@@ -191,6 +192,26 @@ test('buildTargetedExcerpt follows table-of-contents titles to body headings wit
   assert.match(excerpt.text, /Determine the solution set/);
   assert.doesNotMatch(excerpt.text, /Table of Contents/);
   assert.ok(excerpt.start > 20000, 'expected TOC title to redirect to the later body heading');
+});
+
+test('needsTargetedExcerpt flags section matches that miss the requested exercise number', () => {
+  const chunks = chunkMarkdownMaterial({
+    fileId: 'file4',
+    courseId: 'course1',
+    fileName: 'concepts.md',
+    text: `# Chapter 3
+
+## 3.4 Real Repeated Roots; Reduction of Order
+
+This section explains repeated roots and gives an initial value problem example.
+`,
+  });
+
+  const matches = rankMaterialChunks('帮我解 3.4 第 3 题', chunks, 6);
+
+  assert.ok(matches.length > 0, 'expected section-level matches');
+  assert.equal(needsTargetedExcerpt('帮我解 3.4 第 3 题', matches), true);
+  assert.equal(needsTargetedExcerpt('帮我解释 3.4 重根概念', matches), false);
 });
 
 test('formatRetrievedContext includes source metadata and snippets', () => {

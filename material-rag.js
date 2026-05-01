@@ -3,7 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.MaterialRAG = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window, function () {
-  const INDEX_VERSION = 43;
+  const INDEX_VERSION = 44;
   const HEADING_RE = /^(#{1,6})\s+(.+)\s*$/;
   const SECTION_RE = /(?:^|\b|§|第\s*)(\d+(?:\.\d+)+)\s*(?:节|section)?/i;
   const CHAPTER_RE = /(?:chapter|第)\s*(\d+)\s*(?:章)?/i;
@@ -330,6 +330,20 @@
     return score;
   }
 
+  function chunkHasItem(chunk, itemNo) {
+    if (!itemNo) return false;
+    if (chunk.itemNo === itemNo) return true;
+    const content = String(chunk.content || '');
+    return new RegExp(`(?:exercise|problem|习题|题目|第)\\s*\\.?\\s*${escapeRegExp(itemNo)}\\s*(?:题)?`, 'i').test(content) ||
+      new RegExp(`^\\s*\\(?${escapeRegExp(itemNo)}\\)?[\\.)]\\s+`, 'm').test(content);
+  }
+
+  function needsTargetedExcerpt(query, matches) {
+    const hints = extractQueryHints(query || '');
+    if (!hints.itemNo || !matches || !matches.length) return false;
+    return !matches.some(match => chunkHasItem(match, hints.itemNo));
+  }
+
   function rankMaterialChunks(query, chunks, limit = 6) {
     const hints = extractQueryHints(query);
     return (chunks || [])
@@ -359,6 +373,7 @@
     chunkMarkdownMaterial,
     extractQueryHints,
     buildTargetedExcerpt,
+    needsTargetedExcerpt,
     rankMaterialChunks,
     formatRetrievedContext,
   };
