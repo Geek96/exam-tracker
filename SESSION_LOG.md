@@ -267,3 +267,15 @@
 - 新增 `buildTargetedExcerpt()`，按用户问题中的页码、章节号和题号从全文 Markdown 中定位相关摘录
 - 自由提问 fallback 改为注入“课程资料相关摘录”，避免大文件只暴露目录、前言和第 1.1 节开头
 - 同步首页调试版本号和缓存参数到 `v42`
+
+### RAG 目录标题跳转正文修复
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `material-rag.js`, `course.html`, `index.html`, `tests/material-rag.test.js`, `tests/p6-p8-regression.test.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 定位根因：当章节号和页码只在目录中出现，而正文标题缺少章节号时，targeted excerpt 仍可能锚到目录
+- 从目录行提取章节标题，并在目录后方搜索同名正文标题作为更高优先级锚点
+- 增加回归测试覆盖“TOC 有 3.4 编号，正文标题无编号”的转换结果
+- 将 RAG 索引版本、缓存参数和首页调试版本同步到 `v43`

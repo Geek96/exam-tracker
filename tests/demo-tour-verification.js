@@ -61,8 +61,8 @@ const html = read('course.html');
 assert(html.includes('id="demoTourPanel"'), 'course.html should include demo tour panel');
 assert(html.includes('id="demoRestartBanner"'), 'course.html should include demo restart banner');
 assert(html.includes('<script src="demo-tour.js"></script>'), 'course.html should load demo-tour.js');
-assert(html.includes('material-rag.js?v=42'), 'course.html should cache-bust material-rag.js to v=42');
-assert(html.includes('course.js?v=42'), 'course.html should bump course.js to v=42');
+assert(html.includes('material-rag.js?v=43'), 'course.html should cache-bust material-rag.js to v=43');
+assert(html.includes('course.js?v=43'), 'course.html should bump course.js to v=43');
 
 const css = read('course.css');
 assert(css.includes('.demo-tour-panel'), 'course.css should style demo tour panel');

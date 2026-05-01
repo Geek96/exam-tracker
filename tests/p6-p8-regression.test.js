@@ -36,7 +36,7 @@ test('main course management header exposes a quiet build version label', () => 
   const html = read('index.html');
   const css = read('styles.css');
 
-  assert.match(html, /<span class="app-version"[^>]*>v42<\/span>/);
+  assert.match(html, /<span class="app-version"[^>]*>v43<\/span>/);
   assert.match(css, /\.app-version/);
   assert.match(css, /opacity:\s*0\.55/);
 });

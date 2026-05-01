@@ -77,6 +77,30 @@ This section starts on page 181 and discusses computation.
 This is the exercise body that appears far beyond the first excerpt window.
 `;
 
+const tocNumberOnlyMarkdown = `# Table of Contents
+
+3.4 Systems of Linear Equations--Computational Aspects .......... 127
+
+# Chapter 1
+
+${'introductory material '.repeat(1600)}
+
+# Chapter 3
+
+## Systems of Linear Equations--Computational Aspects
+
+The actual section heading lost its numeric prefix during conversion.
+
+### Exercises
+
+1. First computational exercise.
+
+2. Second computational exercise.
+
+3. Determine the solution set of the linear system Ax = b.
+This is the precise exercise text from the body, not the table of contents.
+`;
+
 test('chunkMarkdownMaterial preserves headings and detects textbook identifiers', () => {
   const chunks = chunkMarkdownMaterial({
     fileId: 'file1',
@@ -155,6 +179,18 @@ test('buildTargetedExcerpt uses section and exercise hints instead of the file p
   assert.match(excerpt.text, /Gaussian elimination/);
   assert.doesNotMatch(excerpt.text, /Table of Contents/);
   assert.ok(excerpt.start > 20000, 'expected targeted excerpt to come from later in the document');
+});
+
+test('buildTargetedExcerpt follows table-of-contents titles to body headings without section numbers', () => {
+  const excerpt = buildTargetedExcerpt(tocNumberOnlyMarkdown, '帮我解第 127 页之后 3.4 节第 3 题', {
+    maxChars: 12000,
+    beforeChars: 800,
+  });
+
+  assert.match(excerpt.text, /actual section heading lost its numeric prefix/);
+  assert.match(excerpt.text, /Determine the solution set/);
+  assert.doesNotMatch(excerpt.text, /Table of Contents/);
+  assert.ok(excerpt.start > 20000, 'expected TOC title to redirect to the later body heading');
 });
 
 test('formatRetrievedContext includes source metadata and snippets', () => {

@@ -3,7 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.MaterialRAG = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window, function () {
-  const INDEX_VERSION = 42;
+  const INDEX_VERSION = 43;
   const HEADING_RE = /^(#{1,6})\s+(.+)\s*$/;
   const SECTION_RE = /(?:^|\b|§|第\s*)(\d+(?:\.\d+)+)\s*(?:节|section)?/i;
   const CHAPTER_RE = /(?:chapter|第)\s*(\d+)\s*(?:章)?/i;
@@ -61,6 +61,21 @@
 
   function isLikelyTocLine(line) {
     return /\b(table of contents|contents)\b/i.test(line) || /\.{3,}/.test(line);
+  }
+
+  function extractTocTitle(line, sectionNo, pageNo) {
+    let title = String(line || '').replace(/^#+\s*/, '').trim();
+    if (sectionNo) title = title.replace(new RegExp(`^\\s*${escapeRegExp(sectionNo)}\\s*`), '');
+    title = title.replace(/\.{3,}.*$/, '');
+    if (pageNo) title = title.replace(new RegExp(`\\s+${escapeRegExp(pageNo)}\\s*$`), '');
+    title = title.replace(/\s+\d{1,4}\s*$/, '').trim();
+    return title.length >= 8 ? title : '';
+  }
+
+  function titleSearchRegex(title) {
+    const parts = normalizeSpaces(title).split(/\s+/).filter(Boolean).map(escapeRegExp);
+    if (!parts.length) return null;
+    return new RegExp(parts.join('\\s+'), 'gi');
   }
 
   function inferDocType(fileName, text) {
@@ -252,6 +267,17 @@
       for (const pos of collectRegexPositions(source, sectionRe)) {
         const line = lineAround(source, pos);
         addCandidate(pos, /^#{1,6}\s+/.test(line) ? 120 : 70, 'section');
+        if (isLikelyTocLine(line)) {
+          const title = extractTocTitle(line, hints.sectionNo, hints.pageNo);
+          const titleRe = titleSearchRegex(title);
+          if (titleRe) {
+            const restStart = Math.min(source.length, pos + line.length);
+            const rest = source.slice(restStart);
+            for (const titlePos of collectRegexPositions(rest, titleRe).slice(0, 12)) {
+              addCandidate(restStart + titlePos, 150, 'toc-title');
+            }
+          }
+        }
       }
     }
 
