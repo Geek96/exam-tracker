@@ -5,7 +5,7 @@
 
 **最后更新**: 2026-04-30  
 **当前版本**: `course.js?v=36`
-**部署状态**: 🟡 本地 v36 待部署；生产环境仍为 v35
+**部署状态**: ✅ v36 已部署至 Vercel 生产环境
 
 ---
 
@@ -61,6 +61,7 @@
 ## 近期变更（最新 3 次提交）
 
 ```
+本次工作  fix: save AI answers as markdown materials
 本次工作  docs: record v35 production deployment
 b2ce8af  docs: sync status for material retrieval v35
 771ea77  feat: retrieve relevant course material snippets for AI chat

@@ -14,6 +14,14 @@
 - 更新 `course.js` 缓存版本至 `v=36`，同步 `STATUS.md` 与 `ROADMAP.md`。
 - 验证：`node --test tests/*.test.js`、`node --check course.js`。
 
+### 21:06 EDT — v36 生产部署记录
+
+**操作者**: Codex (GPT-5)
+
+- 推送 `main` 分支提交 `e2ff589` 到 GitHub，触发 Vercel 生产部署。
+- GitHub commit status 返回 `Vercel: success`。
+- 同步 `STATUS.md`：v36 已部署至 Vercel 生产环境。
+
 **操作者**: Codex (GPT-5)
 
 - Confirmed v35 was deployed to Vercel production after pushing `main`, then updated and saved project status files to record the production deployment state.
