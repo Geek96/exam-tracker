@@ -219,3 +219,15 @@
 - 当检索结果为空时，回退注入已选 Markdown 文件正文摘录（每文件/总量限额），保证模型可见资料内容
 - 强化后端 system prompt：当用户消息包含课程资料上下文时，不得声称无法访问已选课程资料
 - 更新回归测试并将 `course.js` 缓存版本升级到 `v=39`
+
+### AI 资料检索未命中引导
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `course.js`, `api/study-plan.js`, `course.html`, `tests/p6-p8-regression.test.js`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 当自由提问的 RAG 关键词检索未命中时，注入已选 Markdown 的可检索文件、章节或小节范围
+- 要求 AI 先引导用户从可读取范围中选择，或用可检索标题/小节编号重新提问
+- 后端 system prompt 明确识别 `RAG 未命中` 上下文，避免回答“无法访问文件”
+- 更新回归测试并将 `course.js` 缓存版本升级到 `v=40`

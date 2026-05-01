@@ -2209,6 +2209,28 @@ async function loadRetrievedMaterialContext(query) {
   }
 }
 
+function summarizeAvailableMaterialChoices(chunks, files) {
+  const byFile = new Map(files.map(f => [f.id, { name: f.name, paths: new Set() }]));
+
+  (chunks || []).forEach(chunk => {
+    const file = byFile.get(chunk.fileId);
+    if (!file) return;
+    const headingPath = (chunk.headingPath || []).filter(Boolean).join(' > ');
+    if (headingPath) {
+      file.paths.add(headingPath);
+    } else if (chunk.sectionNo) {
+      file.paths.add(`Section ${chunk.sectionNo}`);
+    }
+  });
+
+  const lines = [];
+  byFile.forEach(file => {
+    const paths = Array.from(file.paths).slice(0, 8);
+    lines.push(`- ${file.name}${paths.length ? '：' + paths.join('；') : ''}`);
+  });
+  return lines.join('\n');
+}
+
 async function loadSelectedMarkdownExcerptContext() {
   try {
     const all = await dbGetAll();
@@ -2218,6 +2240,11 @@ async function loadSelectedMarkdownExcerptContext() {
     if (!mds.length) return '';
 
     const fileList = mds.map(f => f.name).join('、');
+    const selectedMdIds = new Set(mds.map(f => f.id));
+    const chunks = (await dbGetChunksForCourse(courseId))
+      .filter(c => selectedMdIds.has(c.fileId));
+    const readableChoices = summarizeAvailableMaterialChoices(chunks, mds) ||
+      mds.map(f => `- ${f.name}`).join('\n');
     const PER_FILE = 20000;
     const TOTAL_CAP = 60000;
     let total = 0;
@@ -2235,7 +2262,15 @@ async function loadSelectedMarkdownExcerptContext() {
       total += chunk.length;
     }
 
-    return `课程资料全文摘录（AI 已可读取这些已选 Markdown 文件：${fileList}）。请优先依据以下资料回答；如果资料中没有答案，再明确说明缺失内容：\n${bodies.join('\n\n')}`;
+    return `RAG 未命中：没有找到与用户原问题直接匹配的课程资料片段。
+
+可以检索到的资料范围：
+${readableChoices}
+
+请先引导用户从上面的文件、章节或小节中选择，或建议用户用这些章节标题/小节编号重新提问；如果仍可从下面摘录回答，请说明依据并给出可确定的部分。
+
+课程资料全文摘录（AI 已可读取这些已选 Markdown 文件：${fileList}）。请优先依据以下资料回答；如果资料中没有答案，再明确说明缺失内容：
+${bodies.join('\n\n')}`;
   } catch (e) {
     console.warn('[ExamTracker] selected material fallback failed', e);
     return '';

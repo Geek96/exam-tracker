@@ -164,9 +164,13 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
   assert.match(src, /async function loadRetrievedMaterialContext\(query\)/);
   assert.match(src, /async function loadSelectedMarkdownExcerptContext\(\)/);
+  assert.match(src, /function summarizeAvailableMaterialChoices\(chunks,\s*files\)/);
   assert.match(src, /await Promise\.all\(selectedMdFiles\.map\(f => ensureChunksForMaterial\(f\)\)\)/);
   assert.match(src, /MaterialRAG\.rankMaterialChunks\(query,\s*chunks,\s*6\)/);
   assert.match(src, /MaterialRAG\.formatRetrievedContext\(matches\)/);
+  assert.match(src, /RAG 未命中/);
+  assert.match(src, /可以检索到的资料范围/);
+  assert.match(src, /请先引导用户从上面的文件、章节或小节中选择/);
 
   const doSend = src.match(/async function doSend\(\) \{[\s\S]*?\n\}/)?.[0] || '';
   assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
@@ -181,6 +185,8 @@ test('AI system prompt acknowledges injected local markdown materials', () => {
 
   assert.match(api, /课程资料上下文由前端从用户已选中的本地 Markdown 文件注入/);
   assert.match(api, /不得声称自己无法访问已选课程资料/);
+  assert.match(api, /如果用户消息说明“RAG 未命中”/);
+  assert.match(api, /引导用户从可检索到的文件、章节或小节中选择/);
 });
 
 test('Saved AI answers become markdown materials with rendered preview support', () => {
