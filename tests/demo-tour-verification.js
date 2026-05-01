@@ -61,7 +61,7 @@ const html = read('course.html');
 assert(html.includes('id="demoTourPanel"'), 'course.html should include demo tour panel');
 assert(html.includes('id="demoRestartBanner"'), 'course.html should include demo restart banner');
 assert(html.includes('<script src="demo-tour.js"></script>'), 'course.html should load demo-tour.js');
-assert(html.includes('course.js?v=37'), 'course.html should bump course.js to v=37');
+assert(html.includes('course.js?v=38'), 'course.html should bump course.js to v=38');
 
 const css = read('course.css');
 assert(css.includes('.demo-tour-panel'), 'course.css should style demo tour panel');
@@ -74,6 +74,10 @@ assert(courseJs.includes('function _setCourseChapters'), 'course.js should expos
 assert(courseJs.includes("courseId === '__demo__'"), 'course.js should initialize demo tour for __demo__');
 
 const demoTour = read('demo-tour.js');
+assert(demoTour.includes('DEMO_MATERIALS'), 'demo-tour.js should seed multiple demo materials');
+assert(demoTour.includes('demo_linear_algebra_guide_md'), 'demo-tour.js should seed the study guide material');
+assert(demoTour.includes('demo_linear_algebra_original_excerpt_md'), 'demo-tour.js should seed the original PDF excerpt material');
+assert(read('demo/linear-algebra-original-excerpt.md').includes('# Linear Algebra - Original PDF Excerpt'), 'original PDF excerpt markdown should exist');
 vm.runInNewContext(demoTour, {
   window: {},
   document: {},
@@ -85,6 +89,6 @@ vm.runInNewContext(demoTour, {
   setTimeout,
 });
 assert(demoTour.includes('window.initDemoTour'), 'demo-tour.js should assign window.initDemoTour');
-assert(demoTour.includes('DEMO_MD_FILE_ID'), 'demo-tour.js should define seeded markdown material');
+assert(demoTour.includes('loadDemoMaterialText'), 'demo-tour.js should load external demo markdown material');
 
 console.log('demo tour verification OK');

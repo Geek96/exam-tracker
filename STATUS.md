@@ -4,8 +4,8 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-04-30  
-**当前版本**: `course.js?v=37`
-**部署状态**: ⏳ v37 本地完成，待推送后由 Vercel 部署
+**当前版本**: `course.js?v=38`
+**部署状态**: ⏳ v38 本地完成，待推送后由 Vercel 部署
 
 ---
 
@@ -33,7 +33,7 @@
 | LaTeX 渲染 | ✅ 正常 | KaTeX auto-render |
 | 国际化（zh/en/es）| ✅ 正常 | ~130 个字符串键 |
 | 欢迎页 & 语言选择 | ✅ 正常 | 新用户自动重定向 |
-| 课程 Demo 引导 | ✅ 正常 | 线性代数 Demo，10 步侧边引导，zh/en/es，可重置 |
+| 课程 Demo 引导 | ✅ 正常 | 线性代数 Demo，10 步侧边引导，预置 2 份 Markdown 资料，zh/en/es，可重置 |
 
 ---
 
@@ -62,10 +62,10 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  docs: record p9 demo tour completion
+本次工作  feat: seed two demo markdown materials
+ec72018  docs: record p9 demo tour completion
 e99a88e  feat: add p9 guided demo tour
 7335a59  docs: clarify p9 demo task scope
-01dfb3d  docs: add p9 demo tour implementation plan
 ```
 
 ---
@@ -95,7 +95,7 @@ e99a88e  feat: add p9 guided demo tour
 | P6 | 返回课程页后资料/AI 功能失效修复 | v=34 | AI 会话数据库与资料数据库隔离，`examTrackerFiles` 不再强制升级 |
 | Task4 | 教材 Markdown 分块检索 | v=35 | 章节/题号规则分块，独立索引库，AI 每轮按问题注入相关片段 |
 | Task5 | AI 回复保存公式渲染修复 | v=36 | AI 回复保存为 Markdown 资料，打开资料时支持 Markdown + KaTeX 预览 |
-| p9 | Demo 引导流程 | v=37 | 线性代数 Demo 课程，10 步引导，预置章节/Markdown 资料，支持 zh/en/es 与重置 |
+| p9 | Demo 引导流程 | v=37/v=38 | 线性代数 Demo 课程，10 步引导，预置章节和 2 份 Markdown 资料，支持 zh/en/es 与重置 |
 
 ### 待配置环境变量
 

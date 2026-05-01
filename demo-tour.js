@@ -2,10 +2,9 @@
 (function () {
   var DEMO_ID = '__demo__';
   var TOTAL_STEPS = 10;
-  var DEMO_MD_FILE_ID = 'demo_linear_algebra_md';
-  var DEMO_MD_NAME = 'Linear_Algebra_Demo.md';
+  var LEGACY_DEMO_MD_FILE_ID = 'demo_linear_algebra_md';
 
-  var DEMO_MD = [
+  var DEMO_GUIDE_MD = [
     '# Linear Algebra - Study Guide',
     '',
     '## Chapter 1: Vector Spaces',
@@ -58,6 +57,19 @@
     '',
     '**Gram-Schmidt:** $e_k=\\frac{v_k-\\sum_{j<k}\\langle v_k,e_j\\rangle e_j}{\\|v_k-\\sum_{j<k}\\langle v_k,e_j\\rangle e_j\\|}$',
   ].join('\n');
+
+  var DEMO_MATERIALS = [
+    {
+      id: 'demo_linear_algebra_guide_md',
+      name: 'Linear_Algebra_Demo_Guide.md',
+      text: DEMO_GUIDE_MD,
+    },
+    {
+      id: 'demo_linear_algebra_original_excerpt_md',
+      name: 'Linear_Algebra_Original_PDF_Excerpt.md',
+      path: 'demo/linear-algebra-original-excerpt.md',
+    },
+  ];
 
   var cleanups = [];
   var highlighted = null;
@@ -136,6 +148,17 @@
     skipBtn = document.getElementById('dtpSkipBtn');
     nextBtn = document.getElementById('dtpNextBtn');
     resetBtn = document.getElementById('dtpResetBtn');
+  }
+
+  async function loadDemoMaterialText(material) {
+    if (material.text) return material.text;
+    var res = await fetch(material.path);
+    if (!res.ok) throw new Error('Failed to load demo material: ' + material.path);
+    return res.text();
+  }
+
+  function demoMaterialIds() {
+    return DEMO_MATERIALS.map(function (m) { return m.id; });
   }
 
   function getSteps() {
@@ -392,13 +415,21 @@
     }
     try {
       var files = await dbGetAll();
-      var existing = files.some(function (f) { return f.id === DEMO_MD_FILE_ID; });
-      if (!existing) {
-        var data = new TextEncoder().encode(DEMO_MD).buffer;
+      var seededIds = demoMaterialIds();
+      if (files.some(function (f) { return f.id === LEGACY_DEMO_MD_FILE_ID; })) {
+        await dbDelete(LEGACY_DEMO_MD_FILE_ID);
+        await dbDeleteChunksForFile(LEGACY_DEMO_MD_FILE_ID);
+        files = files.filter(function (f) { return f.id !== LEGACY_DEMO_MD_FILE_ID; });
+      }
+      for (var i = 0; i < DEMO_MATERIALS.length; i++) {
+        var material = DEMO_MATERIALS[i];
+        if (files.some(function (f) { return f.id === material.id; })) continue;
+        var text = await loadDemoMaterialText(material);
+        var data = new TextEncoder().encode(text).buffer;
         var record = {
-          id: DEMO_MD_FILE_ID,
+          id: material.id,
           courseId: DEMO_ID,
-          name: DEMO_MD_NAME,
+          name: material.name,
           type: 'text/markdown',
           size: data.byteLength,
           data: data,
@@ -406,6 +437,9 @@
         };
         await dbSave(record);
         await ensureChunksForMaterial(record);
+      }
+      if (seededIds.length > 1 && localStorage.getItem('demoTourDismissed') !== '1') {
+        localStorage.removeItem('aiFileSelection_' + DEMO_ID);
       }
       await renderMaterials();
     } catch (e) {
@@ -435,9 +469,10 @@
 
     try {
       var files = await dbGetAll();
+      var keepIds = demoMaterialIds();
       for (var i = 0; i < files.length; i++) {
         var f = files[i];
-        if (f.courseId === DEMO_ID && f.id !== DEMO_MD_FILE_ID) {
+        if (f.courseId === DEMO_ID && keepIds.indexOf(f.id) === -1) {
           await dbDelete(f.id);
           await dbDeleteChunksForFile(f.id);
         }

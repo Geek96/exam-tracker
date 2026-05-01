@@ -194,3 +194,15 @@
 - 新增 Demo 重置逻辑，清理 Demo 考试、会话、用户上传资料和资料选择，保留预置 Markdown
 - 新增 zh/en/es 三语 Demo 文案，`course.js` 缓存版本升级到 `v=37`
 - 新增 `tests/demo-tour-verification.js` 静态验证脚本，并通过 JS 语法检查
+
+### Demo 双资料文件
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `demo-tour.js`, `demo/linear-algebra-original-excerpt.md`, `course.html`, `tests/demo-tour-verification.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`
+
+**完成内容**:
+- 从本地 Demo 原 PDF 使用 Ghostscript + Tesseract 生成一份 OCR Markdown 摘录：`demo/linear-algebra-original-excerpt.md`
+- Demo 初始化时同时写入两份 Markdown 资料：学习指南和原 PDF OCR 摘录
+- Demo 重置时保留这两份预置资料，清理其他 Demo 用户资料和旧版单文件种子
+- 更新静态验证脚本，覆盖双文件种子、外部 Markdown 加载和 `course.js?v=38`
