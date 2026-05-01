@@ -46,8 +46,12 @@
 <script src="course.js?v=21"></script>
 ```
 
-**规则**：每次修改 `course.js` 后，必须同步递增 `course.html` 中的 `?v=N`。  
-当前版本：`v=44`。
+**规则**：每次递增版本号时，必须同步更新以下三处：
+1. `course.html` 底部对应 JS 文件的 `?v=N`
+2. `index.html` 第 18 行的 `<span class="app-version">vN</span>`（主页标题旁的版本标签）
+3. `STATUS.md` 顶部的版本号记录
+
+当前版本：`v=46`（`course.js` 保持 `v=44`，`material-rag.js` 为 `v=46`）。
 
 ---
 
