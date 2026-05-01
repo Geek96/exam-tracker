@@ -297,7 +297,11 @@
       const sectionRe = new RegExp(escapeRegExp(hints.sectionNo), 'g');
       for (const pos of collectRegexPositions(source, sectionRe)) {
         const line = lineAround(source, pos);
-        addCandidate(pos, /^#{1,6}\s+/.test(line) ? 120 : 70, 'section');
+        const isHeading = /^#{1,6}\s+/.test(line);
+        const contextBefore = source.slice(Math.max(0, pos - 25), pos);
+        const isNonSectionRef = /(?:公式|equation|formula|fig(?:ure)?|图|表|table|eq)[.\s(（]*$/i.test(contextBefore);
+        const score = isHeading ? 120 : isNonSectionRef ? 0 : 70;
+        addCandidate(pos, score, 'section');
         if (isLikelyTocLine(line)) {
           const title = extractTocTitle(line, hints.sectionNo, hints.pageNo);
           const titleRe = titleSearchRegex(title);

@@ -281,3 +281,33 @@ test('extractQueryHints does not extract sectionNo from formula/figure reference
   assert.equal(extractQueryHints('3.4节第3题').sectionNo, '3.4', '3.4节 still works');
   assert.equal(extractQueryHints('Section 3.4 problem 3').sectionNo, '3.4', 'Section 3.4 still works');
 });
+
+// ── 新增测试：改动 3 ──────────────────────────────────────────────────────
+
+const equationPollutionMarkdown = `# Chapter 2
+
+## Mixing Problems
+
+The cooling equation is (3.4): dT/dt = k(T - M).
+
+${'filler content '.repeat(1500)}
+
+# Chapter 3
+
+## 3.4 Real Repeated Roots
+
+### Exercises
+
+3. Solve y'' + 2y' + y = 0.
+Show that the general solution is y = (c1 + c2*t)*e^(-t).
+`;
+
+test('buildTargetedExcerpt anchors on heading occurrences, not equation refs in earlier chapters', () => {
+  const excerpt = buildTargetedExcerpt(equationPollutionMarkdown, '3.4节第3题', {
+    maxChars: 8000,
+    beforeChars: 500,
+  });
+  assert.match(excerpt.text, /Real Repeated Roots/, 'should land in Section 3.4 heading area');
+  assert.match(excerpt.text, /general solution/, 'should include exercise 3 content');
+  assert.doesNotMatch(excerpt.text, /dT\/dt = k/, 'should not return Chapter 2 equation content');
+});
