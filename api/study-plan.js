@@ -67,7 +67,7 @@ async function handleClaude(system, messages, res) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify({ model: 'claude-opus-4-7', max_tokens: 4096, stream: true, system: system, messages: messages }),
+      body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 4096, stream: true, system: system, messages: messages }),
     });
   } catch (err) {
     res.status(502).json({ error: '无法连接 Anthropic：' + err.message }); return;
