@@ -92,10 +92,11 @@
 - [x] MinerU 单文件资料转换任务支持返回课程页后恢复轮询
 - [x] 修复返回课程页后资料/AI 功能失效：隔离 `examTrackerFiles` 与 `examTrackerChatSessions`
 - [x] Markdown 教材分块检索：按章节、题号和关键词为 AI 注入相关片段
+- [x] AI 回复保存为 Markdown 资料，打开资料时支持 Markdown + KaTeX 公式预览
 
 ---
 
-## 当前能力全景（v=35）
+## 当前能力全景（v=36）
 
 | 模块 | 状态 |
 |---|---|
@@ -106,6 +107,7 @@
 | PDF → Markdown（MinerU，含自动分片）| ✅ |
 | AI 学习助手（Gemini 流式）| ✅ |
 | AI 教材片段检索（Markdown）| ✅ 独立 IndexedDB 索引 |
+| AI 回复保存为资料 | ✅ Markdown + KaTeX 预览 |
 | AI 学习助手（DeepSeek 流式）| 🟡 代码已预置，待 API Key 验证 |
 | AI 学习助手（Claude）| ⚪ UI 入口已存在，后端未接入 |
 | 多会话对话历史 | ✅ 独立 IndexedDB |
@@ -164,6 +166,8 @@
 - [x] 将考试复习安排集成到课程界面, 作为其的一个功能模块
   - 计划：`docs/superpowers/plans/2026-04-30-p6-bug-fix-and-p8-exam-integration.md` Task 4–6
   - 目标版本：v=31
+### p9 - 设计一个课程demo
+- [ ] 为方便普通客户使用, 现在做一个demo, 所有的prompt都带着客户填写一遍. 当然, 不需要客户手动输入. 但是需要一步步引导客户, 从创建课程开始
 ## 未来想法 / Backlog
 
 - 考试日历视图（日历形式展示各课程考试日期）

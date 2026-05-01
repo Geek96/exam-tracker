@@ -4,6 +4,16 @@
 
 ## 2026-04-30
 
+### 21:01 EDT — AI 回复保存为 Markdown 资料并支持公式预览
+
+**操作者**: Codex (GPT-5)
+
+- 将 AI 回复“保存为资料”从 `.txt` 改为 `.md`，并以 `text/markdown` 存入课程资料。
+- Markdown 资料打开时默认展示 Markdown + KaTeX 渲染预览，保留“编辑源码 / 预览”切换。
+- 保存后的 AI 回复资料进入 Markdown 分块索引，后续可被 AI 教材检索读取。
+- 更新 `course.js` 缓存版本至 `v=36`，同步 `STATUS.md` 与 `ROADMAP.md`。
+- 验证：`node --test tests/*.test.js`、`node --check course.js`。
+
 **操作者**: Codex (GPT-5)
 
 - Confirmed v35 was deployed to Vercel production after pushing `main`, then updated and saved project status files to record the production deployment state.

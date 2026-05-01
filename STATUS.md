@@ -4,8 +4,8 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-04-30  
-**当前版本**: `course.js?v=35`
-**部署状态**: ✅ v35 已部署至 Vercel 生产环境
+**当前版本**: `course.js?v=36`
+**部署状态**: 🟡 本地 v36 待部署；生产环境仍为 v35
 
 ---
 
@@ -25,6 +25,7 @@
 | AI 学习助手（Gemini）| ✅ 正常 | 模型链：gemini-3-flash-preview → gemini-2.5-flash |
 | AI 可读资料选择 | ✅ 正常 | 助手顶部文件下拉选择器 |
 | AI 教材片段检索 | ✅ 正常 | Markdown 教材自动分块；提问时按章节/题号/关键词注入相关片段 |
+| AI 回复保存为资料 | ✅ 正常 | 保存为 Markdown；资料查看支持 Markdown + KaTeX 预览 |
 | AI 学习助手（DeepSeek）| 🟡 代码已预置 | 暂缺 API Key，待配置后验证 |
 | AI 学习助手（Claude）| ⚪ 未实现 | UI 入口已存在，后端待接入 |
 | 多会话对话历史 | ✅ 正常 | 存储于独立 IndexedDB：`examTrackerChatSessions` |
@@ -91,6 +92,7 @@ b2ce8af  docs: sync status for material retrieval v35
 | Task3 | MinerU 任务 ID 持久化，返回页面自动续传 | v=33 | 单文件资料转换保存 `taskId`，返回课程页后恢复轮询 |
 | P6 | 返回课程页后资料/AI 功能失效修复 | v=34 | AI 会话数据库与资料数据库隔离，`examTrackerFiles` 不再强制升级 |
 | Task4 | 教材 Markdown 分块检索 | v=35 | 章节/题号规则分块，独立索引库，AI 每轮按问题注入相关片段 |
+| Task5 | AI 回复保存公式渲染修复 | v=36 | AI 回复保存为 Markdown 资料，打开资料时支持 Markdown + KaTeX 预览 |
 
 ### 待配置环境变量
 

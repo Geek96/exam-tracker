@@ -1145,6 +1145,37 @@
   resize: none; font-family: inherit;
 }
 .text-edit-area:focus { outline: none; }
+.text-edit-preview {
+  display: none;
+  width: 100%;
+  min-height: 100%;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+.text-edit-preview h1,
+.text-edit-preview h2,
+.text-edit-preview h3 { margin: 16px 0 8px; }
+.text-edit-preview p,
+.text-edit-preview ul,
+.text-edit-preview ol { margin: 0 0 12px; }
+.text-edit-preview pre {
+  overflow-x: auto;
+  padding: 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
+.text-edit-preview code {
+  color: inherit;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+.text-edit-preview .katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
 
 /* ── MinerU extraction process UI ── */
 .pdf-mineru-process {

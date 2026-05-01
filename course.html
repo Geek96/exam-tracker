@@ -514,6 +514,7 @@
           <div style="display:flex;align-items:center;gap:8px">
             <h3 class="modal-title" id="textEditTitle" data-i18n="viewEdit">查看 / 编辑</h3>
             <button class="btn-sm" id="textEditRenameBtn" style="font-size:11px;padding:3px 8px" data-i18n="renameBtn">✎ 重命名</button>
+            <button class="btn-sm" id="textEditPreviewToggle" style="display:none;font-size:11px;padding:3px 8px" data-i18n="editMarkdown">编辑源码</button>
           </div>
           <input class="form-input" id="textEditRenameInput" style="display:none;margin-top:6px;font-size:13px"
             data-i18n-ph="newFilenamePh" placeholder="输入新文件名" />
@@ -521,6 +522,7 @@
         <button class="modal-close" id="textEditClose">✕</button>
       </div>
       <div class="modal-body text-edit-body">
+        <div class="text-edit-preview" id="textEditPreview"></div>
         <textarea class="text-edit-area" id="textEditArea"></textarea>
       </div>
       <div class="modal-footer">
@@ -579,6 +581,6 @@
   <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
   <script src="strings.js"></script>
   <script src="material-rag.js"></script>
-  <script src="course.js?v=35"></script>
+  <script src="course.js?v=36"></script>
 </body>
 </html>

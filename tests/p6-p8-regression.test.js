@@ -158,7 +158,7 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   const src = read('course.js');
   const html = read('course.html');
   const materialScriptIndex = html.indexOf('material-rag.js');
-  const courseScriptIndex = html.indexOf('course.js?v=35');
+  const courseScriptIndex = html.search(/course\.js\?v=\d+/);
 
   assert.ok(materialScriptIndex > -1, 'course.html should load material-rag.js');
   assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
@@ -170,4 +170,27 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
   assert.doesNotMatch(doSend, /aiConversation\.length === 0/);
   assert.match(doSend, /await sendAIMsg\(text,\s*text,\s*apiContent\)/);
+});
+
+test('Saved AI answers become markdown materials with rendered preview support', () => {
+  const src = read('course.js');
+  const html = read('course.html');
+  const css = read('course.css');
+  const strings = read('strings.js');
+
+  assert.match(src, /const name = `AI对话_[^`]+\.md`/);
+  assert.match(src, /courseId,\s*name,\s*type:\s*'text\/markdown'/);
+  assert.match(src, /await ensureChunksForMaterial\(record\)/);
+  assert.match(src, /function isMarkdownMaterial\(f\)/);
+  assert.match(src, /function renderTextEditPreview\(text\)/);
+  assert.match(src, /preview\.innerHTML = mdToHtml\(text\)/);
+  assert.match(src, /renderMath\(preview\)/);
+
+  assert.match(html, /id="textEditPreviewToggle"/);
+  assert.match(html, /id="textEditPreview"/);
+  assert.match(html, /course\.js\?v=36/);
+
+  assert.match(css, /\.text-edit-preview/);
+  assert.equal((strings.match(/previewMarkdown:/g) || []).length, 3);
+  assert.equal((strings.match(/editMarkdown:/g) || []).length, 3);
 });

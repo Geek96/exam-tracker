@@ -1700,7 +1700,7 @@ async function renderMaterials() {
   grid.style.display = 'grid';
 
   files.forEach(f => {
-    const isText = f.type === 'text/plain' || (f.name || '').endsWith('.md') || (f.name || '').endsWith('.txt');
+    const isText = f.type === 'text/plain' || isMarkdownMaterial(f) || (f.name || '').endsWith('.txt');
     const card = document.createElement('div');
     card.className = 'material-card';
     card.innerHTML = `
@@ -2460,7 +2460,7 @@ async function sendAIMsg(userText, displayLabel, apiContent) {
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'btn-save-msg';
-    saveBtn.textContent = '💾 保存为资料';
+    saveBtn.textContent = window.t('saveAsMaterial');
     saveBtn.addEventListener('click', () => saveMsgAsMaterial(fullText));
     aiMsgEl.appendChild(saveBtn);
 
@@ -2506,13 +2506,15 @@ aiChatInput.addEventListener('input', autoResizeInput);
 async function saveMsgAsMaterial(content) {
   const now  = new Date();
   const pad  = n => String(n).padStart(2, '0');
-  const name = `AI对话_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.txt`;
+  const name = `AI对话_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}.md`;
   const data = new TextEncoder().encode(content).buffer;
-  await dbSave({
+  const record = {
     id: `mat_${Date.now()}_${Math.random().toString(36).slice(2,7)}`,
-    courseId, name, type: 'text/plain',
+    courseId, name, type: 'text/markdown',
     size: data.byteLength, data, addedAt: now.toISOString(),
-  });
+  };
+  await dbSave(record);
+  await ensureChunksForMaterial(record);
   await renderMaterials();
   showToast(window.t('savedMaterials'));
 }
@@ -2520,21 +2522,62 @@ async function saveMsgAsMaterial(content) {
 // ── Text edit modal ───────────────────────────────────────────────────────────
 let textEditFileId = null;
 let textEditOrigFile = null;
+let textEditIsMarkdown = false;
+let textEditMode = 'edit';
+
+function isMarkdownMaterial(f) {
+  return f.type === 'text/markdown' || (f.name || '').toLowerCase().endsWith('.md');
+}
+
+function renderTextEditPreview(text) {
+  const preview = document.getElementById('textEditPreview');
+  preview.innerHTML = mdToHtml(text);
+  renderMath(preview);
+}
+
+function setTextEditMode(mode) {
+  textEditMode = mode;
+  const area = document.getElementById('textEditArea');
+  const preview = document.getElementById('textEditPreview');
+  const toggle = document.getElementById('textEditPreviewToggle');
+  if (!textEditIsMarkdown) {
+    area.style.display = 'block';
+    preview.style.display = 'none';
+    toggle.style.display = 'none';
+    return;
+  }
+
+  toggle.style.display = 'inline-flex';
+  if (mode === 'preview') {
+    renderTextEditPreview(area.value);
+    area.style.display = 'none';
+    preview.style.display = 'block';
+    toggle.textContent = window.t('editMarkdown');
+  } else {
+    preview.style.display = 'none';
+    area.style.display = 'block';
+    toggle.textContent = window.t('previewMarkdown');
+  }
+}
 
 function openTextEditModal(f) {
   textEditFileId = f.id;
   textEditOrigFile = f;
+  textEditIsMarkdown = isMarkdownMaterial(f);
   document.getElementById('textEditTitle').textContent = f.name;
   document.getElementById('textEditRenameInput').style.display = 'none';
   document.getElementById('textEditRenameInput').value = f.name;
   const text = new TextDecoder().decode(f.data);
   document.getElementById('textEditArea').value = text;
+  setTextEditMode(textEditIsMarkdown ? 'preview' : 'edit');
   document.getElementById('textEditModal').classList.add('open');
 }
 function closeTextEditModal() {
   document.getElementById('textEditModal').classList.remove('open');
   textEditFileId = null;
   textEditOrigFile = null;
+  textEditIsMarkdown = false;
+  textEditMode = 'edit';
 }
 
 document.getElementById('textEditClose').addEventListener('click', closeTextEditModal);
@@ -2547,6 +2590,10 @@ document.getElementById('textEditRenameBtn').addEventListener('click', () => {
   const inp = document.getElementById('textEditRenameInput');
   inp.style.display = inp.style.display === 'none' ? 'block' : 'none';
   if (inp.style.display === 'block') inp.focus();
+});
+
+document.getElementById('textEditPreviewToggle').addEventListener('click', () => {
+  setTextEditMode(textEditMode === 'preview' ? 'edit' : 'preview');
 });
 
 document.getElementById('textEditSave').addEventListener('click', async () => {
