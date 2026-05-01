@@ -231,3 +231,23 @@ test('formatRetrievedContext includes source metadata and snippets', () => {
   assert.match(context, /题号：3/);
   assert.match(context, /Exercise 3/);
 });
+
+// ── 新增测试：改动 1 ──────────────────────────────────────────────────────
+
+test('chunkMarkdownMaterial does not pollute sectionNo from equation or figure refs in content', () => {
+  const md = `# Chapter 2
+
+## Mixing Problems
+
+The substance satisfies equation (3.4): dT/dt = k(T - M).
+See also Figure 3.4 for the phase portrait.
+
+1. Solve the mixing problem.
+`;
+  const chunks = chunkMarkdownMaterial({
+    fileId: 'f', courseId: 'c', fileName: 'ch2.md', text: md,
+  });
+  const ch2Chunk = chunks.find(c => (c.headingPath || []).some(h => h.includes('Mixing')));
+  assert.ok(ch2Chunk, 'expected a Chapter 2 chunk');
+  assert.equal(ch2Chunk.sectionNo, '', 'sectionNo must not be set by equation (3.4) in content');
+});

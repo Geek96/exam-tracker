@@ -192,8 +192,9 @@
       const itemBlocks = splitExerciseBlocks(raw);
       for (const itemBlock of itemBlocks) {
         for (const part of splitOversized(itemBlock, maxChars, overlap)) {
-          const metadataText = currentPath.join(' ') + ' ' + part.slice(0, 500);
-          const sectionNo = detectSection(metadataText);
+          const pathText = currentPath.join(' ');
+          const contentSample = part.slice(0, 500);
+          const sectionNo = detectSection(pathText);
           const itemNo = detectItem(part);
           chunks.push({
             id: `${fileId || fileName || 'file'}::${chunkIndex}`,
@@ -204,10 +205,10 @@
             docType,
             blockType: inferBlockType(currentPath, part, itemNo),
             headingPath: currentPath.slice(),
-            chapterNo: detectChapter(metadataText),
+            chapterNo: detectChapter(pathText),
             sectionNo,
             itemNo,
-            pageNo: detectPage(metadataText),
+            pageNo: detectPage(contentSample),
             content: part,
             chunkIndex: chunkIndex++,
             updatedAt: new Date().toISOString(),
