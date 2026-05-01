@@ -3,7 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.MaterialRAG = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window, function () {
-  const INDEX_VERSION = 44;
+  const INDEX_VERSION = 46;
   const HEADING_RE = /^(#{1,6})\s+(.+)\s*$/;
   const SECTION_RE = /(?:^|\b|§|第\s*)(\d+(?:\.\d+)+)\s*(?:节|section)?/i;
   const CHAPTER_RE = /(?:chapter|第)\s*(\d+)\s*(?:章)?/i;

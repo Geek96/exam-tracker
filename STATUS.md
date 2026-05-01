@@ -4,8 +4,8 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-05-01
-**当前版本**: `course.js?v=44` / `material-rag.js?v=45`
-**部署状态**: ⏳ v45 本地完成，待推送后由 Vercel 部署
+**当前版本**: `course.js?v=44` / `material-rag.js?v=46`
+**部署状态**: ⏳ v46 本地完成，待推送后由 Vercel 部署
 
 ---
 
@@ -62,7 +62,7 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  fix: trigger targeted excerpt on section+item mismatch
+本次工作  fix: rag section retrieval — heading-only sectionNo, query normalization, anchor downweight
 c823ee9  fix: supplement low-confidence rag matches
 1b3510e  fix: follow toc titles to body excerpts
 519ff3d  fix: target material fallback excerpts
@@ -75,7 +75,7 @@ c823ee9  fix: supplement low-confidence rag matches
 | # | 任务 | 状态 | 目标版本 | 核心改动 |
 |---|---|---|---|---|
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
-| P10 | RAG 结构化索引与习题级召回 | 🟢 本地完成，待验收 | v=45 | `material-rag.js` 低置信度题号补充摘录、目录标题跳转正文、索引版本自动重建；section+item 联合命中检测修复 |
+| P10 | RAG 结构化索引与习题级召回 | ✅ 已验收 | v=46 | sectionNo 仅从标题路径提取；查询归一化多形式章节写法；全文搜索公式/图编号降权 |
 
 ### 已验收完成
 
