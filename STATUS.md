@@ -62,10 +62,10 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  feat: add p9 guided demo tour
+本次工作  docs: record p9 demo tour completion
+e99a88e  feat: add p9 guided demo tour
 7335a59  docs: clarify p9 demo task scope
 01dfb3d  docs: add p9 demo tour implementation plan
-f2ebbb2  docs: expand p9 spec with full i18n demo content for zh/en/es
 ```
 
 ---

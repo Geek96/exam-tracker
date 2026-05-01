@@ -186,6 +186,8 @@
 
 **完成内容**:
 - 先提交用户已有 P9 范围澄清改动：`7335a59 docs: clarify p9 demo task scope`
+- 完成并提交 P9 实现：`e99a88e feat: add p9 guided demo tour`
+- 同步 `STATUS.md` 最新提交记录，并提交 P9 完成状态文档
 - 新增首页自动预置 `__demo__` 线性代数 Demo 课程，并随语言切换同步课程名/科目
 - 新增 Demo 课程 10 步侧边引导：创建考试、确认预填考试、查看章节、勾选章节、查看资料、选择 AI 可读 Markdown、发送预置问题、保存并预览 AI 回复
 - 新增预置 6 章节和一份线性代数 Markdown 资料，写入 IndexedDB 并生成本地检索 chunks
