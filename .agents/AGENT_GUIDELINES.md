@@ -51,7 +51,7 @@
 2. `index.html` 第 18 行的 `<span class="app-version">vN</span>`（主页标题旁的版本标签）
 3. `STATUS.md` 顶部的版本号记录
 
-当前版本：`v=46`（`course.js` 保持 `v=44`，`material-rag.js` 为 `v=46`）。
+当前版本：`v=47`（`course.js` 保持 `v=45`，`material-rag.js` 为 `v=47`）。
 
 ---
 

@@ -361,7 +361,7 @@
         if (collecting) {
           if (level <= foundLevel) break;
           result.push(line);
-        } else if (detectSection(headingMatch[2]) === sectionNo) {
+        } else if (/^\s*\d+(?:\.\d+)+\b/.test(headingMatch[2]) && detectSection(headingMatch[2]) === sectionNo) {
           foundLevel = level;
           collecting = true;
           result.push(line);
