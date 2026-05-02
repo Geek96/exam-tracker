@@ -4,7 +4,7 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-05-01
-**当前版本**: `course.js?v=44` / `material-rag.js?v=46`
+**当前版本**: `course.js?v=45` / `material-rag.js?v=47`
 **部署状态**: ✅ v46 已推送，Vercel 自动部署中
 
 ---
@@ -62,10 +62,9 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-本次工作  fix: rag section retrieval — heading-only sectionNo, query normalization, anchor downweight
-c823ee9  fix: supplement low-confidence rag matches
-1b3510e  fix: follow toc titles to body excerpts
-519ff3d  fix: target material fallback excerpts
+69b456f  feat: provider-aware material context — Gemini full doc, others section-level
+5bc0249  feat: add extractSectionFromMarkdown to material-rag.js (v47)
+a2ac32d  docs: plan provider-aware material context (P11, v47)
 ```
 
 ---
@@ -76,7 +75,7 @@ c823ee9  fix: supplement low-confidence rag matches
 |---|---|---|---|---|
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
 | P10 | RAG 结构化索引与习题级召回 | ✅ 已验收 | v=46 | sectionNo 仅从标题路径提取；查询归一化多形式章节写法；全文搜索公式/图编号降权 |
-| P11 | Provider-Aware 教材上下文策略 | 🔲 待实现 | v=47 | Gemini → 整本教材；其他 → 整节提取（`extractSectionFromMarkdown`）；fallback → chunk RAG |
+| P11 | Provider-Aware 教材上下文策略 | ✅ 已验收 | v=47 | Gemini → 整本教材；其他 → 整节提取（`extractSectionFromMarkdown`）；fallback → chunk RAG |
 
 ### 已验收完成
 
