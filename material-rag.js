@@ -3,7 +3,7 @@
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   root.MaterialRAG = api;
 })(typeof globalThis !== 'undefined' ? globalThis : window, function () {
-  const INDEX_VERSION = 46;
+  const INDEX_VERSION = 47;
   const HEADING_RE = /^(#{1,6})\s+(.+)\s*$/;
   const SECTION_RE = /(?:^|\b|§|第\s*)(\d+(?:\.\d+)+)\s*(?:节|section)?/i;
   const CHAPTER_RE = /(?:chapter|第)\s*(\d+)\s*(?:章)?/i;
@@ -347,6 +347,33 @@
     };
   }
 
+  function extractSectionFromMarkdown(markdown, sectionNo) {
+    if (!sectionNo) return '';
+    const lines = String(markdown || '').split('\n');
+    let foundLevel = -1;
+    let collecting = false;
+    const result = [];
+
+    for (const line of lines) {
+      const headingMatch = line.match(HEADING_RE);
+      if (headingMatch) {
+        const level = headingMatch[1].length;
+        if (collecting) {
+          if (level <= foundLevel) break;
+          result.push(line);
+        } else if (detectSection(headingMatch[2]) === sectionNo) {
+          foundLevel = level;
+          collecting = true;
+          result.push(line);
+        }
+      } else if (collecting) {
+        result.push(line);
+      }
+    }
+
+    return result.join('\n').trim();
+  }
+
   function scoreChunk(hints, chunk) {
     const heading = (chunk.headingPath || []).join(' ').toLowerCase();
     const content = String(chunk.content || '').toLowerCase();
@@ -419,6 +446,7 @@
     chunkMarkdownMaterial,
     extractQueryHints,
     buildTargetedExcerpt,
+    extractSectionFromMarkdown,
     needsTargetedExcerpt,
     rankMaterialChunks,
     formatRetrievedContext,

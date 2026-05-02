@@ -6,6 +6,7 @@ const {
   chunkMarkdownMaterial,
   extractQueryHints,
   buildTargetedExcerpt,
+  extractSectionFromMarkdown,
   needsTargetedExcerpt,
   rankMaterialChunks,
   formatRetrievedContext,
@@ -310,4 +311,62 @@ test('buildTargetedExcerpt anchors on heading occurrences, not equation refs in 
   assert.match(excerpt.text, /Real Repeated Roots/, 'should land in Section 3.4 heading area');
   assert.match(excerpt.text, /general solution/, 'should include exercise 3 content');
   assert.doesNotMatch(excerpt.text, /dT\/dt = k/, 'should not return Chapter 2 equation content');
+});
+
+// ── extractSectionFromMarkdown tests ────────────────────────────────────────
+
+const multiSectionMd = `# Chapter 3
+
+## 3.3 Introduction
+
+Intro content.
+
+## 3.4 Real Repeated Roots
+
+This section explains repeated roots.
+
+### 3.4.1 Method
+
+The characteristic equation approach.
+
+### Exercises
+
+1. Solve y'' + 2y' + y = 0.
+
+2. Solve y'' + 4y' + 4y = 0.
+
+3. Show the general solution form.
+
+## 3.5 Next Section
+
+Unrelated content.
+`;
+
+test('extractSectionFromMarkdown returns content from matching heading to next same-level heading', () => {
+  const section = extractSectionFromMarkdown(multiSectionMd, '3.4');
+  assert.match(section, /Real Repeated Roots/);
+  assert.match(section, /repeated roots/);
+  assert.match(section, /characteristic equation/);
+  assert.match(section, /3\.4\.1/);
+  assert.match(section, /Solve y'' \+ 4y'/);
+  assert.doesNotMatch(section, /Unrelated content/);
+  assert.doesNotMatch(section, /Intro content/);
+});
+
+test('extractSectionFromMarkdown returns empty string when section not found', () => {
+  const section = extractSectionFromMarkdown(multiSectionMd, '9.9');
+  assert.equal(section, '');
+});
+
+test('extractSectionFromMarkdown includes sub-headings within the section', () => {
+  const section = extractSectionFromMarkdown(multiSectionMd, '3.4');
+  assert.match(section, /### 3\.4\.1 Method/);
+  assert.match(section, /### Exercises/);
+});
+
+test('extractSectionFromMarkdown handles single-entry markdown with no following heading', () => {
+  const md = `# Chapter 1\n\n## 1.1 Only Section\n\nOnly content here.\n`;
+  const section = extractSectionFromMarkdown(md, '1.1');
+  assert.match(section, /Only Section/);
+  assert.match(section, /Only content here/);
 });
