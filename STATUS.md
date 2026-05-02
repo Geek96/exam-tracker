@@ -76,6 +76,7 @@ c823ee9  fix: supplement low-confidence rag matches
 |---|---|---|---|---|
 | P5 | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | — | `api/study-plan.js` + course.html model toggle |
 | P10 | RAG 结构化索引与习题级召回 | ✅ 已验收 | v=46 | sectionNo 仅从标题路径提取；查询归一化多形式章节写法；全文搜索公式/图编号降权 |
+| P11 | Provider-Aware 教材上下文策略 | 🔲 待实现 | v=47 | Gemini → 整本教材；其他 → 整节提取（`extractSectionFromMarkdown`）；fallback → chunk RAG |
 
 ### 已验收完成
 
