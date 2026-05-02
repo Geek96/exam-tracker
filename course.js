@@ -2189,17 +2189,26 @@ async function loadMarkdownContext() {
   } catch { return ''; }
 }
 
-async function loadRetrievedMaterialContext(query) {
+async function loadRetrievedMaterialContext(query, provider) {
   if (!window.MaterialRAG) return '';
   try {
     const all = await dbGetAll();
     const selectedMdFiles = all
       .filter(f => f.courseId === courseId && (f.name || '').toLowerCase().endsWith('.md'))
       .filter(f => selectedFiles.size === 0 || selectedFiles.has(f.id));
+    if (!selectedMdFiles.length) return '';
+
+    if (provider === 'gemini') {
+      return await loadFullDocumentContext(selectedMdFiles);
+    }
+
+    // Non-Gemini: try section-level extraction first
+    const sectionCtx = await loadSectionContext(query, selectedMdFiles);
+    if (sectionCtx) return sectionCtx;
+
+    // Fallback: chunk-based RAG
     await Promise.all(selectedMdFiles.map(f => ensureChunksForMaterial(f)));
     const selectedMdIds = new Set(selectedMdFiles.map(f => f.id));
-    if (!selectedMdIds.size) return '';
-
     const chunks = (await dbGetChunksForCourse(courseId))
       .filter(c => selectedMdIds.has(c.fileId));
     const matches = MaterialRAG.rankMaterialChunks(query, chunks, 6);
@@ -2212,6 +2221,38 @@ async function loadRetrievedMaterialContext(query) {
     console.warn('[ExamTracker] material retrieval failed', e);
     return '';
   }
+}
+
+async function loadFullDocumentContext(selectedMdFiles) {
+  const TOTAL_CAP = 800000;
+  let total = 0;
+  const bodies = [];
+  for (const f of selectedMdFiles) {
+    if (total >= TOTAL_CAP) break;
+    const text = new TextDecoder().decode(f.data || new ArrayBuffer(0));
+    const slice = text.slice(0, TOTAL_CAP - total);
+    bodies.push(`--- 文件：${f.name} ---\n${slice}`);
+    total += slice.length;
+  }
+  if (!bodies.length) return '';
+  const label = total >= TOTAL_CAP ? `（共 ${TOTAL_CAP} 字符，已截断）` : '';
+  return `完整课程资料${label}：\n${bodies.join('\n\n')}`;
+}
+
+async function loadSectionContext(query, selectedMdFiles) {
+  if (!window.MaterialRAG || !MaterialRAG.extractSectionFromMarkdown) return '';
+  const hints = MaterialRAG.extractQueryHints(query);
+  if (!hints.sectionNo) return '';
+  const bodies = [];
+  for (const f of selectedMdFiles) {
+    const text = new TextDecoder().decode(f.data || new ArrayBuffer(0));
+    const section = MaterialRAG.extractSectionFromMarkdown(text, hints.sectionNo);
+    if (section) {
+      bodies.push(`--- 文件：${f.name}  § ${hints.sectionNo} ---\n${section}`);
+    }
+  }
+  if (!bodies.length) return '';
+  return `课程资料 § ${hints.sectionNo}（完整章节内容）：\n${bodies.join('\n\n')}`;
 }
 
 async function buildTargetedMaterialExcerptContext(query, files, label) {
@@ -2608,7 +2649,7 @@ async function doSend() {
 
   // Retrieve relevant material snippets for every API turn, while keeping history lean.
   let apiContent = text;
-  const mdCtx = await loadRetrievedMaterialContext(text);
+  const mdCtx = await loadRetrievedMaterialContext(text, aiProvider);
   const fallbackMdCtx = mdCtx ? '' : await loadSelectedMarkdownExcerptContext(text);
   if (mdCtx || fallbackMdCtx) apiContent = text + '\n\n' + (mdCtx || fallbackMdCtx);
   await sendAIMsg(text, text, apiContent);
