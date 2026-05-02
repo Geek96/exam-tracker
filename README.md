@@ -1,85 +1,174 @@
-# 复习追踪器 / Study Tracker
+# Course & Exam Manager
 
-> 帮助学生管理课程章节进度、导入教材、并通过 AI 助手制定复习计划。
+> Helps students manage course chapter progress, upload textbook materials, and use an AI assistant for study planning and Q&A.
 
-**在线访问**: [Vercel 部署链接]  
-**技术栈**: HTML · CSS · Vanilla JS · Vercel Serverless Functions  
-**AI 引擎**: Google Gemini（对话 + 目录生成）· MinerU（PDF 解析）
+**Live Demo**: [Your Vercel deployment URL]
+**Video Demo**: [Your YouTube link]
+**Tech Stack**: HTML · CSS · Vanilla JS · Vercel Serverless Functions (Node.js)
+**AI Engines**: Google Gemini · Anthropic Claude · DeepSeek · MinerU (PDF parsing)
 
 ---
 
-## 功能概览
+## Features
 
-| 功能 | 状态 |
+| Feature | Status |
 |---|---|
-| 课程管理（增删改，颜色标签，考试日期倒计时） | ✅ |
-| PDF 书签自动提取章节目录 | ✅ |
-| MinerU AI 智能提取目录（无书签 PDF）| ✅ |
-| 手动添加/编辑章节 | ✅ |
-| 章节完成度追踪 | ✅ |
-| 课程资料管理（PDF/Markdown/HTML 上传）| ✅ |
-| PDF → Markdown 转换（MinerU）| ✅ |
-| AI 学习助手（Gemini 流式对话）| ✅ |
-| 多会话对话历史 | ✅ |
-| 三语支持（中/英/西）| ✅ |
-| 欢迎页语言选择 | ✅ |
-| LaTeX 数学公式渲染（KaTeX）| ✅ |
+| Course management (create/edit/delete, color tags, exam countdown) | ✅ |
+| Exam management (add exams with name, date, type; home-screen reminders) | ✅ |
+| Chapter/section tracking with completion checkboxes and progress bar | ✅ |
+| PDF bookmark auto-import for chapter lists | ✅ |
+| MinerU AI-powered TOC extraction (for PDFs without bookmarks) | ✅ |
+| Manual chapter add/edit | ✅ |
+| Course material uploads (PDF / Markdown / HTML) | ✅ |
+| PDF → Markdown conversion via MinerU (auto-splits PDFs > 199 pages) | ✅ |
+| AI study assistant with real-time streaming (Gemini / Claude / DeepSeek) | ✅ |
+| Provider-aware RAG: Gemini receives full document; others receive the exact section | ✅ |
+| Section-level material retrieval (`extractSectionFromMarkdown`) | ✅ |
+| Multi-session conversation history (IndexedDB) | ✅ |
+| Save AI responses as Markdown materials with KaTeX / LaTeX preview | ✅ |
+| Trilingual UI (Chinese / English / Spanish) | ✅ |
+| Guided 10-step demo tour with pre-seeded Linear Algebra course | ✅ |
+| LaTeX math rendering (KaTeX auto-render) | ✅ |
 
 ---
 
-## 本地开发
+## Project Overview
 
-本项目**无构建步骤**，直接用浏览器打开 HTML 文件即可预览静态部分。
+Course & Exam Manager is a browser-based study tool for university students. The core problem it solves: students need to track progress across multiple courses, manage exam deadlines, and get AI help with specific textbook problems — all in one place.
 
-如需测试 API 功能，需安装 Vercel CLI 并配置环境变量：
+The app runs entirely in the browser with **no build step**. All JavaScript files are loaded directly by the browser. The backend is three lightweight Vercel Serverless Functions that act as secure proxies to external AI APIs (so API keys are never exposed to the client).
+
+When a student asks the AI "solve problem 3 in section 3.4," the app automatically locates section 3.4 in the uploaded textbook Markdown and injects the full section content into the AI prompt — no manual copy-pasting required.
+
+---
+
+## Setup and Installation
+
+### Prerequisites
+
+- A modern browser (Chrome, Firefox, Safari, Edge)
+- [Vercel CLI](https://vercel.com/docs/cli) for local API testing (optional)
+- API keys for Gemini and MinerU (see below)
+
+### Running Locally (static UI only)
+
+No installation needed. Open `index.html` directly in your browser to use the app without AI features.
+
+### Running Locally (with AI features)
 
 ```bash
+# Install Vercel CLI
 npm i -g vercel
-vercel env pull .env.local   # 从 Vercel Dashboard 拉取环境变量
-vercel dev                    # 启动本地开发服务（含 Serverless Functions）
+
+# Link to your Vercel project (first time only)
+vercel link
+
+# Pull environment variables from Vercel Dashboard
+vercel env pull .env.local
+
+# Start local dev server (serves HTML + Serverless Functions)
+vercel dev
 ```
 
-### 必须的环境变量
+Then open `http://localhost:3000` in your browser.
 
-| 变量 | 获取方式 |
+### Environment Variables
+
+Set these in the Vercel Dashboard under **Settings → Environment Variables**:
+
+| Variable | Where to get it |
 |---|---|
 | `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com) |
-| `MINERU_API_KEY` | [MinerU 官网](https://mineru.net) 注册后获取 |
+| `MINERU_API_KEY` | [MinerU website](https://mineru.net) — register for a free key |
+| `DEEPSEEK_API_KEY` | [DeepSeek Platform](https://platform.deepseek.com) (optional) |
+
+### Deployment
+
+The project auto-deploys to Vercel on every push to the `main` branch via GitHub Actions. No manual deploy step needed.
 
 ---
 
-## 项目结构
+## How to Use
+
+1. **Open the app** — on first visit you will be prompted to select a language (Chinese / English / Spanish)
+2. **Try the demo** — a Linear Algebra demo course is pre-loaded; follow the 10-step guided tour
+3. **Add a course** — click "Add Course," enter a name and color
+4. **Add an exam** — inside a course, add upcoming exams; they appear on the home screen sorted by date
+5. **Import chapters** — upload a PDF to auto-extract its bookmark structure, or add chapters manually
+6. **Upload materials** — upload a PDF or Markdown file; the app converts PDF to Markdown via MinerU
+7. **Chat with AI** — ask questions about the course material; the AI reads your uploaded Markdown files automatically
+8. **Save AI responses** — click the save icon on any AI reply to store it as a Markdown file with LaTeX rendering
+
+---
+
+## Project Structure
 
 ```
 exam-tracker/
-├── .agents/          # AI Agent 行为准则 & 开发日志
-├── .github/          # CI/CD (Vercel 自动部署)
-├── api/              # Vercel Serverless Functions
-│   ├── study-plan.js
-│   ├── generate-toc.js
-│   ├── mineru-submit.js
-│   └── mineru-result.js
-├── docs/             # 架构文档 & 设计规范
-│   ├── adr/          # 架构决策记录
-│   ├── design-system.md
-│   └── sitemap.md
-├── public/           # 静态资源（图片、字体）
-├── src/              # 预留源码目录（当前项目为平铺结构）
-├── app.js            # 课程列表页逻辑
-├── course.js         # 课程详情页逻辑
-├── strings.js        # i18n 字符串 & t()/tf() 函数
-├── index.html        # 课程列表页
-├── course.html       # 课程详情页
-├── welcome.html      # 欢迎/语言选择页
-├── styles.css        # 全局样式
-├── course.css        # 课程详情页专属样式
-├── welcome.css       # 欢迎页样式
-├── STATUS.md         # 实时项目状态
-└── ROADMAP.md        # 开发路线图
+├── index.html              # Home page: course grid + upcoming exams reminder
+├── course.html             # Course detail: chapters, exams, materials, AI chat
+├── welcome.html            # New-user language selection and onboarding
+├── app.js                  # Home page logic (course CRUD, exam reminders)
+├── course.js               # Course page logic (~2800 lines)
+├── material-rag.js         # RAG module: Markdown chunking, section extraction, retrieval
+├── strings.js              # i18n key-value store — window.t() / window.tf()
+├── styles.css              # Global styles (dark purple Holo theme, CSS variables)
+├── course.css              # Course page styles
+├── welcome.css             # Welcome page styles
+├── api/
+│   ├── study-plan.js       # Serverless: streams AI responses (Gemini / Claude / DeepSeek)
+│   ├── generate-toc.js     # Serverless: Gemini extracts TOC JSON from Markdown
+│   ├── mineru-submit.js    # Serverless: submits PDF URL to MinerU, returns taskId
+│   └── mineru-result.js    # Serverless: polls MinerU task status, returns Markdown
+├── tests/
+│   └── material-rag.test.js  # 18 automated tests for the RAG module (Node.js test runner)
+├── docs/
+│   └── superpowers/
+│       ├── specs/          # Design documents
+│       └── plans/          # Implementation plans
+├── report/
+│   └── HW14_filled.md      # HW14 project report
+├── .agents/
+│   └── AGENT_GUIDELINES.md # AI agent behavior guidelines for this project
+├── STATUS.md               # Live project status board
+└── ROADMAP.md              # Feature roadmap and completed milestones
 ```
 
 ---
 
-## 贡献 / AI 辅助开发
+## Running Tests
 
-在使用 AI Agent 修改本项目前，请先阅读 [`.agents/AGENT_GUIDELINES.md`](.agents/AGENT_GUIDELINES.md)。
+```bash
+node --test tests/material-rag.test.js
+```
+
+Expected output: 18 tests passing, 0 failing. Tests cover:
+- Markdown chunk extraction and heading path detection
+- Section number detection from queries (including Chinese numerals)
+- Exercise item detection and scoring
+- Section-level content extraction (`extractSectionFromMarkdown`)
+- Edge cases: equation/figure reference disambiguation, TOC heading disambiguation
+
+---
+
+## Technologies Used
+
+| Technology | Version | Purpose |
+|---|---|---|
+| Vanilla JS / HTML / CSS | — | Core application (no framework, no build step) |
+| Vercel Serverless Functions | Node.js 20 | Secure API proxy for AI services |
+| Google Gemini API | gemini-2.5-flash | Primary AI assistant + TOC generation |
+| Anthropic Claude API | claude-sonnet-4-6 | Alternative AI assistant |
+| MinerU API | — | PDF → Markdown conversion |
+| pdf.js | 3.11.174 | Client-side PDF bookmark extraction |
+| pdf-lib | 1.17.1 | Client-side PDF splitting (> 199 pages) |
+| KaTeX | 0.16.11 | LaTeX math formula rendering |
+| marked.js | 9.1.6 | Markdown → HTML rendering |
+| IndexedDB | Browser native | File storage, chat history, RAG chunk index |
+
+---
+
+## Author
+
+Daniel — Personal Programming Project (HW14)
+Virginia Tech, Spring 2026
