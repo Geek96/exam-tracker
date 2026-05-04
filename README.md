@@ -2,8 +2,8 @@
 
 > Helps students manage course chapter progress, upload textbook materials, and use an AI assistant for study planning and Q&A.
 
-**Live Demo**: [Your Vercel deployment URL]
-**Video Demo**: [Your YouTube link]
+**Live Demo**: [https://exam-tracker-one.vercel.app/]
+**Video Demo**: [https://youtu.be/7ZpIGmXaofQ]
 **Tech Stack**: HTML · CSS · Vanilla JS · Vercel Serverless Functions (Node.js)
 **AI Engines**: Google Gemini · Anthropic Claude · DeepSeek · MinerU (PDF parsing)
 

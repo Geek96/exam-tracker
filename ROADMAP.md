@@ -152,7 +152,7 @@
 - [ ] 欢迎页"注册/登录"入口实现
 - [ ] 多设备数据同步（可选）
 ### P5 - 中国大模型尝试
-- [ ] 配置 `DEEPSEEK_API_KEY` 后验证 deepseek 的大模型 api 流式输出
+- [x] 配置 `DEEPSEEK_API_KEY` 后验证 deepseek 的大模型 api 流式输出
 - [x] 预置 DeepSeek provider 代码与前端入口
 ---
 ### P6 - 重大bug修复
