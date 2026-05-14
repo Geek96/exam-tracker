@@ -52,11 +52,11 @@
 
 ## 环境变量
 
-| 变量 | 配置位置 | 状态 |
-|---|---|---|
-| `GEMINI_API_KEY` | Vercel Dashboard（Production + Preview）| ✅ 已配置 |
-| `MINERU_API_KEY` | Vercel Dashboard（Production + Preview）| ✅ 已配置 |
-| `DEEPSEEK_API_KEY` | Vercel Dashboard（Production + Preview）| ⬜ 待配置 |
+| 变量                 | 配置位置                                   | 状态    |
+| ------------------ | -------------------------------------- | ----- |
+| `GEMINI_API_KEY`   | Vercel Dashboard（Production + Preview） | ✅ 已配置 |
+| `MINERU_API_KEY`   | Vercel Dashboard（Production + Preview） | ✅ 已配置 |
+| `DEEPSEEK_API_KEY` | Vercel Dashboard（Production + Preview） | ⬜ 待配置 |
 
 ---
 

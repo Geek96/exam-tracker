@@ -145,17 +145,17 @@
 ## 当前任务
 
 ### P1 — 稳定性验证
-- [ ] 验证 litterbox / 0x0.st 在 MinerU 服务器（中国）端的可访问性
-- [ ] 压力测试：>500 页 PDF 分片全流程耗时基准
+- [x] 验证 litterbox / 0x0.st 在 MinerU 服务器（中国）端的可访问性
+- [x] 压力测试：>500 页 PDF 分片全流程耗时基准
 
 ### P2 — Claude AI 后端接入
-- [ ] 新建 `api/claude-plan.js`（参考 `study-plan.js` SSE 模式）
-- [ ] 接入 Anthropic SDK，支持流式输出
-- [ ] 前端 Claude 对话入口完整联通
+- [x] 新建 `api/claude-plan.js`（参考 `study-plan.js` SSE 模式）
+- [x] 接入 Anthropic SDK，支持流式输出
+- [x] 前端 Claude 对话入口完整联通
 
 ### P3 — 移动端响应式
 - [ ] `course.css` / `styles.css` 媒体查询适配小屏
-- [ ] 浮动 MinerU 组件在移动端的交互优化
+- [x] 浮动 MinerU 组件在移动端的交互优化
 
 ### P4 — 用户账号系统
 - [ ] 选型：本地账号（IndexedDB）vs. 云端（Vercel + DB）
@@ -163,9 +163,13 @@
 - [ ] 多设备数据同步（可选）
 
 ### P5 — DeepSeek API 接入
-- [ ] 配置 `DEEPSEEK_API_KEY` 后验证流式输出端到端可用性（代码已预置）
+- [x] 配置 `DEEPSEEK_API_KEY` 后验证流式输出端到端可用性（代码已预置）
 
----
+P6 -- 现有的 bug 修复
+---首先, 目前的pdf解析环节, 当minerU 被调用之后, 之前先切割大容量pdf文档, 再分批放入解析, 最后再拼成一个完整md文档的这一方法经验证会损失大量的内容, 具体原因还不清楚. 要么检查bug, 要不考虑一下有没有替代产品或不同方案.
+
+P7: 支持用户将生成的文档内容下载下来的功能
+P8: 想想看可以怎样和obsidian进行一个联动, 比如在
 
 ## 未来想法 / Backlog
 
