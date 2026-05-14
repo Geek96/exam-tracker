@@ -2,6 +2,20 @@
 
 > Canonical project session log. Entries are kept in reverse chronological order.
 
+## 2026-05-13
+
+### 归档已验收任务（P10、P11）
+
+**操作者**: Claude Sonnet 4.6
+
+**涉及文件**: `STATUS.md`, `SESSION_LOG.md`
+
+**完成内容**:
+- 将 `STATUS.md` 活动 TASKS 表中已标记 ✅ 已验收 的 P10（RAG 结构化索引与习题级召回，v=46）和 P11（Provider-Aware 教材上下文策略，v=47）移入"已验收完成"归档区。
+- 活动任务表现仅保留 P5（DeepSeek API Key 待配置）与空占位行 P12。
+
+---
+
 ## 2026-05-01
 
 ### 17:00 EDT — extractQueryHints 查询归一化修复（Tasks 3+4）
