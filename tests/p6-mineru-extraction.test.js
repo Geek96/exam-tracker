@@ -133,6 +133,23 @@ test('extractMdFromZip — returns null for empty ZIP (no .md files)', () => {
   assert.equal(result, null);
 });
 
+test('output_files — all .md URLs are fetched (not just the first)', () => {
+  // Simulate the fixed source: must use filter+map, not find
+  const src = fs.readFileSync(
+    new URL('../api/mineru-result.js', 'file://' + __filename), 'utf8'
+  );
+  // Should NOT have the old single-find pattern
+  assert.ok(
+    !src.includes("files.find(u => String(u).endsWith('.md'))"),
+    'Old single-find pattern must be removed'
+  );
+  // Should have the new filter pattern
+  assert.ok(
+    src.includes(".filter(u => u.endsWith('.md'))"),
+    'New filter-all pattern must be present'
+  );
+});
+
 test('content limit is now 10 MB (not 200 KB)', () => {
   // Check the literal in source rather than calling the full handler
   const src = fs.readFileSync(

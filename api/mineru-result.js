@@ -97,12 +97,24 @@ async function handler(req, res) {
     if (state === 'done' || state === 'success' || state === 'finished' || state === 'completed') {
       let content = d.markdown || d.html || d.content || '';
 
-      // 1. output_files array — find a direct .md URL (MinerU v4 common format)
+      // 1. output_files array — collect ALL .md URLs, fetch in parallel, concatenate
       if (!content) {
         const files = d.extract_result?.output_files || d.output_files || d.files_url || [];
-        const mdUrl = files.find(u => String(u).endsWith('.md'));
-        if (mdUrl) {
-          try { content = await fetchAndExtractMd(String(mdUrl)); } catch {}
+        const mdUrls = files.map(u => String(u)).filter(u => u.endsWith('.md'));
+        if (mdUrls.length > 0) {
+          try {
+            const parts = await Promise.all(
+              mdUrls.map(u => fetchAndExtractMd(u).catch(() => ''))
+            );
+            content = parts.filter(Boolean).join('\n\n');
+          } catch {}
+        }
+        // fallback: if no .md URLs, try the first zip/file URL
+        if (!content) {
+          const anyUrl = files[0] ? String(files[0]) : '';
+          if (anyUrl) {
+            try { content = await fetchAndExtractMd(anyUrl); } catch {}
+          }
         }
       }
 
