@@ -4,7 +4,9 @@
 
 const zlib = require('zlib');
 
-// Minimal ZIP parser — extracts the first .md file found in the archive
+// Minimal ZIP parser — extracts ALL .md files, sorts by name, and concatenates.
+// MinerU may output multiple .md files (per-chapter or per-page); collecting all
+// avoids the content loss that occurred when only the first file was returned.
 function extractMdFromZip(buf) {
   try {
     // Locate End of Central Directory (EOCD) signature 0x06054b50
@@ -17,6 +19,8 @@ function extractMdFromZip(buf) {
     const nEntries = buf.readUInt16LE(eocdOff + 10);
     const cdOff    = buf.readUInt32LE(eocdOff + 16);
     let pos = cdOff;
+
+    const mdFiles = []; // { name, content }
 
     for (let i = 0; i < nEntries; i++) {
       if (buf.length < pos + 46 || buf.readUInt32LE(pos) !== 0x02014b50) break;
@@ -38,10 +42,16 @@ function extractMdFromZip(buf) {
       if (buf.length < dOff + csz) continue;
 
       const cdata = buf.slice(dOff, dOff + csz);
-      return comp === 0
+      const text = comp === 0
         ? cdata.toString('utf8')
         : zlib.inflateRawSync(cdata).toString('utf8');
+      mdFiles.push({ name, text });
     }
+
+    if (mdFiles.length === 0) return null;
+    // Sort alphabetically so page/section ordering is preserved
+    mdFiles.sort((a, b) => a.name.localeCompare(b.name));
+    return mdFiles.map(f => f.text).join('\n\n');
   } catch {}
   return null;
 }
@@ -110,7 +120,9 @@ async function handler(req, res) {
       if (!content && d.result?.markdown) content = d.result.markdown;
       if (!content && d.result?.html)     content = d.result.html;
 
-      res.json({ status: 'done', content: content.slice(0, 200000) });
+      // 10 MB cap — generous enough for any realistic textbook chunk while
+      // still preventing runaway response sizes from the Vercel function.
+      res.json({ status: 'done', content: content.slice(0, 10_000_000) });
 
     } else if (state === 'failed' || state === 'error' || state === 'fail') {
       res.json({ status: 'failed', error: d.err_msg || d.error || d.message || '解析失败' });
