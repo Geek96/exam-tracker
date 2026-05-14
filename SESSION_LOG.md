@@ -4,6 +4,26 @@
 
 ## 2026-05-13
 
+### P6 — MinerU 分片内容丢失修复 + 静态测试
+
+**操作者**: Claude Sonnet 4.6
+
+**涉及文件**: `api/mineru-result.js`, `tests/p6-mineru-extraction.test.js`, `STATUS.md`
+
+**根因**:
+1. `extractMdFromZip` 遇到第一个 `.md` 文件即返回；MinerU ZIP 包含多个 `.md`（按章节/页分割），后续全部丢失
+2. `content.slice(0, 200000)` 每分片硬截断 200 KB；实测 611 页教材全文约 1 MB，平均每分片 ~254 KB，必然截断
+
+**修复**:
+- `extractMdFromZip`：改为收集 ZIP 内全部 `.md` 文件，按文件名排序后拼接
+- 截断上限：200 KB → 10 MB
+
+**静态测试（`tests/p6-mineru-extraction.test.js`）**:
+- 6 个测试全部通过：单文件提取、多文件拼接、排序保序、非 md 文件忽略、空 ZIP 返回 null、10 MB 上限验证
+- 实测 demo PDF（611 页，23 MB）：全文 ~1 MB，每分片均值 ~254 KB，旧 200 KB 上限确认会截断
+
+---
+
 ### 归档已验收任务（P10、P11）
 
 **操作者**: Claude Sonnet 4.6
