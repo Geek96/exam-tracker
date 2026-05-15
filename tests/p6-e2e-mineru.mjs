@@ -8,15 +8,14 @@ import fs from 'fs';
 import path from 'path';
 
 const BASE_URL = 'https://exam-tracker-one.vercel.app';
-// Use pre-split chunk (pages 1-199) — MinerU rejects files > 200 pages.
-// Generate with: python3 -c "import pypdf,os; ..."  (see README or run once)
-const PDF_PATH = '/tmp/la_chunk1.pdf';
+// Use pre-split chunk (pages 200-398) — testing the chunk where truncation was reported.
+const PDF_PATH = '/tmp/la_chunk2.pdf';
 const POLL_INTERVAL_MS = 8000;
 const MAX_POLLS = 90; // 12 minutes
 
 // ── Step 1: Upload PDF to litterbox.catbox.moe (72h temp link) ───────────────
 async function uploadFile(filePath) {
-  console.log('📤 Uploading PDF chunk to litterbox.catbox.moe… (~7.5 MB)');
+  console.log('📤 Uploading PDF chunk (pages 200-398) to litterbox.catbox.moe… (~7.1 MB)');
   const fileBuffer = fs.readFileSync(filePath);
   const blob = new Blob([fileBuffer], { type: 'application/pdf' });
   const fd = new FormData();
@@ -70,13 +69,14 @@ function analyseContent(content, label) {
   console.log('   Total lines       :', content.split('\n').length.toLocaleString());
 
   // Check for key chapter markers expected in a 199-page slice of this book
+  // Chunk 2 covers pages 200-398: Chapters 3 end, 4, early 5 of Friedberg
   const checks = [
-    { label: 'Chapter 1 (Vector Spaces)',        pattern: /vector\s+space/i },
-    { label: 'Chapter 2 (Linear Transformations)',pattern: /linear\s+transformation/i },
-    { label: 'Chapter 3 (Systems)',               pattern: /system.*linear.*equation/i },
+    { label: 'Chapter 4 (Determinants)',          pattern: /determinant/i },
+    { label: 'Chapter 5 (Diagonalization)',       pattern: /diagonali[sz]|eigenvalue|eigenvector/i },
     { label: 'Section headers present',           pattern: /^#+\s+/m },
     { label: 'Exercise/problem content',          pattern: /exercise|theorem|proof/i },
-    { label: 'Math notation present',             pattern: /\$|\\\(|\\begin\{/  },
+    { label: 'Math notation present',             pattern: /\$|\\\(|\\begin\{/ },
+    { label: 'Content from late in chunk (Ch5)',  pattern: /cayley.hamilton|markov|invariant\s+sub/i },
   ];
 
   console.log('\n   Content checks:');
