@@ -2224,7 +2224,7 @@ async function loadRetrievedMaterialContext(query, provider) {
 }
 
 async function loadFullDocumentContext(selectedMdFiles) {
-  const TOTAL_CAP = 800000;
+  const TOTAL_CAP = 4_000_000;
   let total = 0;
   const bodies = [];
   for (const f of selectedMdFiles) {
