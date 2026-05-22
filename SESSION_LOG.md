@@ -2,6 +2,26 @@
 
 > Canonical project session log. Entries are kept in reverse chronological order.
 
+## 2026-05-22
+
+### P13 — 部署架构迁移方案制定（产品经理）
+
+**操作者**: 产品经理 Agent
+
+**涉及文件**: `docs/superpowers/specs/2026-05-22-railway-migration-china-access-design.md`, `docs/superpowers/plans/2026-05-22-railway-migration-china-access.md`, `STATUS.md`, `ROADMAP.md`
+
+**产出**:
+- 完整的 Railway 后端迁移设计规格与 6 Task 执行计划
+- 国内访问三阶段方案：阿里云 OSS+CDN（前端）+ 阿里云函数计算（后端）+ DeepSeek（AI）
+- STATUS.md 新增 P13 任务条目；ROADMAP.md 新增 P13 任务和待执行子项
+
+**关键设计决策**:
+- `api/*.js` handler 函数零修改，Express 做薄封装
+- 新增 `config.js` 暴露 `window.API_BASE`，前端无需构建步骤即可切换 API 地址
+- 国内 AI 使用 DeepSeek（study-plan.js 已预置），无需新增 API 集成
+
+---
+
 ## 2026-05-13
 
 ### P6 — MinerU 分片内容丢失修复 + 静态测试

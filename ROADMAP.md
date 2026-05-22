@@ -104,7 +104,7 @@
 - [x] 支持 zh/en/es 三语文案和重置 Demo
 
 ### M10 — RAG 精准召回与 Provider-Aware 教材上下文 ✅
-> 2026-05-01
+> 2026-05-13
 
 - [x] `sectionNo` 仅从标题路径提取，避免正文内容中的章节编号干扰分块
 - [x] `extractQueryHints` 查询归一化：中文数字 / 阿拉伯数字章节写法统一；公式/图编号引用屏蔽
@@ -164,6 +164,27 @@
 
 ### P5 — DeepSeek API 接入
 - [x] 配置 `DEEPSEEK_API_KEY` 后验证流式输出端到端可用性（代码已预置）
+
+### P13 — 部署架构迁移：Railway 后端 + 国内访问方案 📋
+> 计划制定：2026-05-22 | 设计规格：`docs/superpowers/specs/2026-05-22-railway-migration-china-access-design.md`
+> 执行计划：`docs/superpowers/plans/2026-05-22-railway-migration-china-access.md`
+
+- [ ] **Phase 1 — Railway 后端迁移**（优先，可立即执行）
+  - [ ] 创建 `server/index.js`（Express 封装 5 个 handler）
+  - [ ] 创建 `config.js`，前端通过 `window.API_BASE` 切换 API 地址
+  - [ ] 更新 `course.html` 最先加载 `config.js`
+  - [ ] 更新 `course.js` 中 6 处 `/api/` 调用加 `window.API_BASE` 前缀
+  - [ ] 创建 `railway.json` 并部署到 Railway
+  - [ ] 在 Railway Dashboard 配置所有环境变量
+- [ ] **Phase 2 — 国内前端访问**（需 ICP 备案，约 20 工作日）
+  - [ ] 阿里云 OSS Bucket 创建 + 静态托管
+  - [ ] 阿里云 CDN 接入 + ICP 备案域名 CNAME
+- [ ] **Phase 3 — 国内后端（阿里云 FC + DeepSeek）**
+  - [ ] `s.yaml` 配置 + 阿里云函数计算 HTTP 触发器部署
+  - [ ] `study-plan.js` 国内默认 provider 切换为 DeepSeek
+- [ ] **Phase 4 — 国内 PDF 解析验证**（低优先级）
+  - [ ] 验证 MinerU API 国内可用性
+  - [ ] 如不可用，评估阿里云文档智能 IDP 替代方案
 
 P6 -- 现有的 bug 修复
 ---首先, 目前的pdf解析环节, 当minerU 被调用之后, 之前先切割大容量pdf文档, 再分批放入解析, 最后再拼成一个完整md文档的这一方法经验证会损失大量的内容, 具体原因还不清楚. 要么检查bug, 要不考虑一下有没有替代产品或不同方案.

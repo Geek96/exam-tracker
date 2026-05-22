@@ -3,9 +3,9 @@
 > 📍 本文件是项目的实时状态快照。每次重要变更后更新。  
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
-**最后更新**: 2026-05-13
+**最后更新**: 2026-05-22
 **当前版本**: `course.js?v=45` / `material-rag.js?v=47` / `api/mineru-result.js` P6 fix
-**部署状态**: ✅ main 已推送，Vercel 自动部署中
+**部署状态**: ✅ main 已推送，Vercel 自动部署中 | 🟡 Railway 迁移计划已制定（P13）
 
 ---
 
@@ -75,7 +75,7 @@ a2ac32d  docs: plan provider-aware material context (P11, v47)
 | #   | 任务              | 状态                    | 目标版本 | 核心改动                                           |
 | --- | --------------- | --------------------- | ---- | ---------------------------------------------- |
 | P5  | DeepSeek API 接入 | 🟡 代码已预置，待 API Key 验证 | —    | `api/study-plan.js` + course.html model toggle |
-| P12 |                 |                       |      |                                                |
+| P13 | Railway 后端迁移 + 国内访问方案 | 📋 计划已制定，待执行 | — | Express 封装 API + config.js + 阿里云 OSS/CDN/FC + DeepSeek |
 
 ### 已验收完成
 
@@ -105,4 +105,6 @@ a2ac32d  docs: plan provider-aware material context (P11, v47)
 
 | 变量 | 用途 | 配置位置 |
 |---|---|---|
-| `DEEPSEEK_API_KEY` | P5 DeepSeek API 验证 | Vercel Dashboard（Production + Preview）|
+| `DEEPSEEK_API_KEY` | P5 DeepSeek API 验证 + P13 国内 AI | Vercel Dashboard + Railway + 阿里云 FC |
+| `ANTHROPIC_API_KEY` | P13 Claude API（已有代码预置） | Railway Dashboard |
+| `ALLOWED_ORIGINS` | P13 CORS 白名单 | Railway Dashboard + 阿里云 FC |
