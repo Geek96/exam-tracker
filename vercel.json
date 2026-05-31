@@ -2,5 +2,10 @@
   "framework": null,
   "buildCommand": null,
   "outputDirectory": ".",
-  "installCommand": null
+  "installCommand": null,
+  "functions": {
+    "api/upload-tmpfile.js": {
+      "maxDuration": 60
+    }
+  }
 }

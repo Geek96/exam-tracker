@@ -4,7 +4,7 @@
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
 **最后更新**: 2026-05-13
-**当前版本**: `course.js?v=45` / `material-rag.js?v=47` / `api/mineru-result.js` P6 fix
+**当前版本**: `course.js?v=46` / `material-rag.js?v=47` / `api/upload-tmpfile.js` EXA-6 fix
 **部署状态**: ✅ main 已推送，Vercel 自动部署中
 
 ---
@@ -41,7 +41,7 @@
 
 | 问题 | 严重性 | 状态 |
 |---|---|---|
-| litterbox.catbox.moe 在国内网络下的可用性未验证 | 中 | 待测试 |
+| ~~litterbox.catbox.moe 在国内网络下的可用性未验证~~ | ~~中~~ | ✅ 已修复（EXA-6）：新增 `/api/upload-tmpfile` 服务端代理，绕过 CORS 和区域屏蔽 |
 | MinerU 处理超大文件（>500 页）时总耗时较长 | 低 | 预期行为 |
 | AI 对话切换语言不实时生效（需重新开始对话）| 低 | 已知限制 |
 | 教材检索为本地规则检索，暂未接入 embedding 语义向量 | 低 | 可作为后续增强 |

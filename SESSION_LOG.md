@@ -2,6 +2,26 @@
 
 > Canonical project session log. Entries are kept in reverse chronological order.
 
+## 2026-05-31
+
+### EXA-6 — 文档上传失败修复（服务端代理 + IndexedDB onversionchange 修复）
+
+**操作者**: Claude Sonnet 4.6 (debugger agent)
+
+**涉及文件**: `api/upload-tmpfile.js`（新建）, `course.js`（v45→v46）, `vercel.json`, `STATUS.md`
+
+**根因**:
+1. `uploadToTmpfiles` 直接在浏览器端向 `litterbox.catbox.moe` 和 `0x0.st` 发起跨域请求，CORS 策略变化或国内网络屏蔽导致上传失败
+2. 三处 IndexedDB `onversionchange` 回调只调用 `.close()` 未清空缓存引用，导致版本升级后后续操作拿到已关闭的连接
+
+**修复**:
+- 新建 `/api/upload-tmpfile.js`：服务端代理，接收 base64 文件数据，服务器到服务器上传至 litterbox/0x0.st，绕过 CORS
+- `uploadToTmpfiles`：≤3 MB 文件优先走服务端代理；>3 MB 保留浏览器直接上传作为 fallback；超时由 60s 延长至 90s
+- `vercel.json`：为代理函数配置 `maxDuration: 60`
+- `getDB/getChunkDB/getChatDB` 三处 `onversionchange` 修复为 `_idb.close(); _idb = null;`
+
+---
+
 ## 2026-05-13
 
 ### P6 — MinerU 分片内容丢失修复 + 静态测试

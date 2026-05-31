@@ -913,41 +913,65 @@ async function resumeMinerUPoll(taskId, onStatus, isCancelled) {
 }
 
 async function uploadToTmpfiles(arrayBuffer, filename, mimeType) {
-  const SERVICES = [
-    async () => {
-      const blob = new Blob([arrayBuffer], { type: mimeType });
-      const fd = new FormData();
-      fd.append('reqtype', 'fileupload');
-      fd.append('time', '72h');
-      fd.append('fileToUpload', blob, filename);
-      const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
-        method: 'POST', body: fd, signal: AbortSignal.timeout(60000),
+  // Proxy limit: ~3 MB raw stays under Vercel's 4.5 MB body cap after base64 encoding.
+  const PROXY_SIZE_LIMIT = 3 * 1024 * 1024;
+
+  const SERVICES = [];
+
+  // Server-side proxy (first choice for small files): avoids browser CORS and regional blocks.
+  if (arrayBuffer.byteLength <= PROXY_SIZE_LIMIT) {
+    SERVICES.push(async () => {
+      const b64 = arrayBufferToBase64(arrayBuffer);
+      const r = await fetch('/api/upload-tmpfile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filename, mimeType, data: b64 }),
+        signal: AbortSignal.timeout(90000),
       });
-      if (!r.ok) throw new Error(`litterbox HTTP ${r.status}`);
-      const url = (await r.text()).trim();
-      if (!url.startsWith('https://')) throw new Error('litterbox: ' + url.slice(0, 80));
-      return url;
-    },
-    async () => {
-      const blob = new Blob([arrayBuffer], { type: mimeType });
-      const fd = new FormData();
-      fd.append('file', blob, filename);
-      const r = await fetch('https://0x0.st', {
-        method: 'POST', body: fd, signal: AbortSignal.timeout(60000),
-      });
-      if (!r.ok) throw new Error(`0x0.st HTTP ${r.status}`);
-      const url = (await r.text()).trim();
-      if (!url.startsWith('https://')) throw new Error('0x0.st: ' + url.slice(0, 80));
-      return url;
-    },
-  ];
+      if (!r.ok) throw new Error(`proxy HTTP ${r.status}`);
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+      if (!data.url || !data.url.startsWith('https://')) throw new Error('proxy: invalid url');
+      return data.url;
+    });
+  }
+
+  // Direct browser upload to litterbox (fallback, subject to CORS and regional availability).
+  SERVICES.push(async () => {
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    const fd = new FormData();
+    fd.append('reqtype', 'fileupload');
+    fd.append('time', '72h');
+    fd.append('fileToUpload', blob, filename);
+    const r = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+      method: 'POST', body: fd, signal: AbortSignal.timeout(90000),
+    });
+    if (!r.ok) throw new Error(`litterbox HTTP ${r.status}`);
+    const url = (await r.text()).trim();
+    if (!url.startsWith('https://')) throw new Error('litterbox: ' + url.slice(0, 80));
+    return url;
+  });
+
+  // Direct browser upload to 0x0.st (second fallback).
+  SERVICES.push(async () => {
+    const blob = new Blob([arrayBuffer], { type: mimeType });
+    const fd = new FormData();
+    fd.append('file', blob, filename);
+    const r = await fetch('https://0x0.st', {
+      method: 'POST', body: fd, signal: AbortSignal.timeout(90000),
+    });
+    if (!r.ok) throw new Error(`0x0.st HTTP ${r.status}`);
+    const url = (await r.text()).trim();
+    if (!url.startsWith('https://')) throw new Error('0x0.st: ' + url.slice(0, 80));
+    return url;
+  });
 
   let lastErr;
   for (const service of SERVICES) {
     try { return await service(); }
     catch (e) { lastErr = e; console.warn('[upload fallback]', e.message); }
   }
-  throw new Error('所有上传服务均失败：' + lastErr.message);
+  throw new Error('所有上传服务均失败：' + (lastErr ? lastErr.message : '未知错误'));
 }
 
 function arrayBufferToBase64(buf) {
@@ -1506,7 +1530,7 @@ function getDB() {
     };
     req.onsuccess = e => {
       _idb = e.target.result;
-      _idb.onversionchange = () => _idb.close();
+      _idb.onversionchange = () => { _idb.close(); _idb = null; };
       res(_idb);
     };
     req.onerror = () => rej(req.error);
@@ -1552,7 +1576,7 @@ function getChunkDB() {
     };
     req.onsuccess = e => {
       _chunkIdb = e.target.result;
-      _chunkIdb.onversionchange = () => _chunkIdb.close();
+      _chunkIdb.onversionchange = () => { _chunkIdb.close(); _chunkIdb = null; };
       res(_chunkIdb);
     };
     req.onerror = () => rej(req.error);
@@ -1612,7 +1636,7 @@ function getChatDB() {
     };
     req.onsuccess = e => {
       _chatIdb = e.target.result;
-      _chatIdb.onversionchange = () => _chatIdb.close();
+      _chatIdb.onversionchange = () => { _chatIdb.close(); _chatIdb = null; };
       res(_chatIdb);
     };
     req.onerror = () => rej(req.error);
