@@ -26,7 +26,9 @@
 gemini-3-flash-preview  →  gemini-2.5-flash
 ```
 
-每个模型最多重试 2 次（处理 503/429 限流），全部失败时返回汇总错误信息。
+`api/generate-toc.js` 每个模型最多重试 2 次（处理 503/429 限流），全部失败时返回汇总错误信息。
+
+`api/study-plan.js` 是流式对话接口：每个 Gemini 上游请求用 45s timeout 约束首包等待时间；当前模型连接失败、超时或返回错误时，函数会在开始向浏览器写 SSE 之前尝试下一个模型。Vercel 为该函数配置 `maxDuration: 60`，避免大上下文首 token 较慢时函数被平台提前终止，导致浏览器只显示 `Failed to fetch`。
 
 ## Claude 作为备选
 

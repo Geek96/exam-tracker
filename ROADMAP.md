@@ -1,7 +1,7 @@
 # Roadmap
 
 > 本文件记录项目愿景与开发进度。由项目负责人维护。
-> 最后同步：2026-05-13
+> 最后同步：2026-06-02
 
 ---
 
@@ -31,6 +31,7 @@
 - [x] 接入 Gemini 2.0 Flash → 2.5 Flash → 3-flash-preview 降级链
 - [x] 多轮对话，支持材料保存与文本编辑
 - [x] 顶层错误处理，流式错误通过 SSE 透传
+- [x] EXA-9：Gemini 流式提问增加 Vercel 60s 函数时长、45s 上游超时与备用模型降级，避免页面只显示 `Failed to fetch`
 
 ### M3 — UI 视觉重设计 ✅
 > 2026-04-28
@@ -123,7 +124,7 @@
 | 章节完成度追踪 | ✅ |
 | 课程资料管理 | ✅ |
 | PDF → Markdown（MinerU，含自动分片）| ✅ |
-| AI 学习助手（Gemini 流式）| ✅ |
+| AI 学习助手（Gemini 流式）| ✅ EXA-9：60s 函数时长 + 45s 上游超时 + 模型降级 |
 | AI 教材片段检索（Markdown）| ✅ 独立 IndexedDB 索引；支持索引版本自动重建、目录标题跳转正文、裸编号习题、低置信度题号补充摘录和文档类型 metadata |
 | AI 回复保存为资料 | ✅ Markdown + KaTeX 预览 |
 | Provider-Aware 教材上下文 | ✅ Gemini 整本；其他模型整节；fallback chunk RAG |

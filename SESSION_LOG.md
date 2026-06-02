@@ -363,3 +363,15 @@
 - 新增 `needsTargetedExcerpt()`，当用户询问具体题号且已返回片段不含该题号时判定为低置信度命中
 - 自由提问在低置信度命中时追加“RAG 题号补充摘录”，从已选 Markdown 全文按页码、章节号或题号定位正文
 - 将 RAG 索引版本、缓存参数和首页调试版本同步到 `v44`
+### 2026-06-02 16:52 CST — EXA-9 Gemini AI 提问 `Failed to fetch` 修复
+
+**操作者**: 高级程序员1 / Codex (GPT-5)
+
+**涉及文件**: `api/study-plan.js`, `vercel.json`, `tests/p6-p8-regression.test.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`, `docs/adr/ADR-004-gemini-as-ai-backbone.md`, `technical-reports/EXA-9-gemini-fail-to-fetch.md`
+
+**完成内容**:
+- 定位根因：Gemini 对话函数未配置 Vercel `maxDuration`，且对大上下文首包等待没有上游 timeout 或备用模型降级，平台超时/上游慢响应会让浏览器只显示 `Failed to fetch`
+- 为 `api/study-plan.js` 增加 Gemini 模型链：`gemini-3-flash-preview` → `gemini-2.5-flash`
+- Gemini 上游流式请求增加 `AbortSignal.timeout(45000)`，当前模型失败时在写入 SSE 前切到备用模型
+- 为 `api/study-plan.js` 配置 Vercel `maxDuration: 60`
+- 补充回归测试，并同步项目状态、路线图、ADR 和技术报告
