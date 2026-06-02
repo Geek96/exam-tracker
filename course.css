@@ -1787,6 +1787,12 @@
 }
 .ai-send-btn:hover { opacity: 0.85; box-shadow: 0 2px 12px rgba(180,79,255,0.5); }
 .ai-send-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.ai-send-btn.is-pausing {
+  background: rgba(249, 123, 107, 0.18);
+  border: 1px solid rgba(249, 123, 107, 0.55);
+  color: #F97B6B;
+  box-shadow: 0 2px 10px rgba(249, 123, 107, 0.22);
+}
 .ai-input-hint { font-size: 11px; color: var(--muted); text-align: center; margin-top: 7px; opacity: 0.7; }
 
 /* ── Rename in text-edit modal ── */

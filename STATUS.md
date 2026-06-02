@@ -3,8 +3,8 @@
 > 📍 本文件是项目的实时状态快照。每次重要变更后更新。  
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
-**最后更新**: 2026-05-13
-**当前版本**: `course.js?v=46` / `material-rag.js?v=47` / `api/upload-tmpfile.js` EXA-6 fix
+**最后更新**: 2026-06-02
+**当前版本**: `course.js?v=48` / `material-rag.js?v=47` / `api/upload-tmpfile.js` EXA-6 fix
 **部署状态**: ✅ main 已推送，Vercel 自动部署中
 
 ---
@@ -22,7 +22,7 @@
 | 章节完成度追踪                | ✅ 正常     |                                                                       |
 | 课程资料上传                 | ✅ 正常     |                                                                       |
 | PDF → Markdown（MinerU） | ✅ 正常     | 支持 > 199 页自动分片；单文件任务返回课程页后可恢复轮询                                       |
-| AI 学习助手（Gemini）        | ✅ 正常     | 模型链：gemini-3-flash-preview → gemini-2.5-flash                         |
+| AI 学习助手（Gemini）        | ✅ 正常     | 模型链：gemini-3-flash-preview → gemini-2.5-flash；输入框默认回车换行，点击发送；生成中可暂停并编辑上一条 prompt |
 | AI 可读资料选择              | ✅ 正常     | 助手顶部文件下拉选择器                                                           |
 | AI 教材片段检索              | ✅ 正常     | Markdown 教材自动分块；支持索引版本自动重建、目录标题跳转正文、裸编号习题识别、低置信度题号补充摘录，检索为空时按问题定位相关摘录 |
 | AI 回复保存为资料             | ✅ 正常     | 保存为 Markdown；资料查看支持 Markdown + KaTeX 预览                               |
@@ -96,6 +96,7 @@ a2ac32d  docs: plan provider-aware material context (P11, v47)
 | P6    | 返回课程页后资料/AI 功能失效修复        | v=34      | AI 会话数据库与资料数据库隔离，`examTrackerFiles` 不再强制升级                |
 | Task4 | 教材 Markdown 分块检索          | v=35      | 章节/题号规则分块，独立索引库，AI 每轮按问题注入相关片段                            |
 | Task5 | AI 回复保存公式渲染修复             | v=36      | AI 回复保存为 Markdown 资料，打开资料时支持 Markdown + KaTeX 预览          |
+| EXA-7 | AI 输入提交与暂停生成               | v=48      | 取消 Enter 快捷提交，保留 textarea 默认换行；生成中发送按钮切换为暂停，暂停后恢复上一条 prompt 供编辑 |
 | p9    | Demo 引导流程                 | v=37/v=38 | 线性代数 Demo 课程，10 步引导，预置章节和 2 份 Markdown 资料，支持 zh/en/es 与重置 |
 | P10   | RAG 结构化索引与习题级召回           | v=46      | sectionNo 仅从标题路径提取；查询归一化多形式章节写法；全文搜索公式/图编号降权              |
 | P11   | Provider-Aware 教材上下文策略    | v=47      | Gemini → 整本教材；其他 → 整节提取（`extractSectionFromMarkdown`）；fallback → chunk RAG |

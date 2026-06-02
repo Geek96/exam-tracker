@@ -1,7 +1,7 @@
 # Roadmap
 
 > 本文件记录项目愿景与开发进度。由项目负责人维护。
-> 最后同步：2026-05-13
+> 最后同步：2026-06-02
 
 ---
 
@@ -93,6 +93,7 @@
 - [x] 修复返回课程页后资料/AI 功能失效：隔离 `examTrackerFiles` 与 `examTrackerChatSessions`
 - [x] Markdown 教材分块检索：按章节、题号和关键词为 AI 注入相关片段
 - [x] AI 回复保存为 Markdown 资料，打开资料时支持 Markdown + KaTeX 公式预览
+- [x] AI 输入框取消 Enter 快捷提交，支持生成中暂停并恢复上一条 prompt 继续编辑
 
 ### M9 — Demo 引导流程 ✅
 > 2026-04-30
@@ -114,7 +115,7 @@
 
 ---
 
-## 当前能力全景（v=47）
+## 当前能力全景（v=48）
 
 | 模块 | 状态 |
 |---|---|
@@ -123,7 +124,7 @@
 | 章节完成度追踪 | ✅ |
 | 课程资料管理 | ✅ |
 | PDF → Markdown（MinerU，含自动分片）| ✅ |
-| AI 学习助手（Gemini 流式）| ✅ |
+| AI 学习助手（Gemini 流式）| ✅ 点击发送；生成中可暂停，暂停后恢复上一条 prompt 供编辑 |
 | AI 教材片段检索（Markdown）| ✅ 独立 IndexedDB 索引；支持索引版本自动重建、目录标题跳转正文、裸编号习题、低置信度题号补充摘录和文档类型 metadata |
 | AI 回复保存为资料 | ✅ Markdown + KaTeX 预览 |
 | Provider-Aware 教材上下文 | ✅ Gemini 整本；其他模型整节；fallback chunk RAG |

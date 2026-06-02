@@ -36,7 +36,7 @@ test('main course management header exposes a quiet build version label', () => 
   const html = read('index.html');
   const css = read('styles.css');
 
-  assert.match(html, /<span class="app-version"[^>]*>v44<\/span>/);
+  assert.match(html, /<span class="app-version"[^>]*>v48<\/span>/);
   assert.match(css, /\.app-version/);
   assert.match(css, /opacity:\s*0\.55/);
 });
@@ -142,8 +142,8 @@ test('Navigation storage fix avoids blocking the materials database upgrade path
 
   assert.match(src, /function getChatDB\(\)/);
   assert.match(src, /async function dbGetLegacySessions\(cid\)/);
-  assert.match(src, /_idb\.onversionchange\s*=\s*\(\)\s*=>\s*_idb\.close\(\)/);
-  assert.match(src, /_chatIdb\.onversionchange\s*=\s*\(\)\s*=>\s*_chatIdb\.close\(\)/);
+  assert.match(src, /_idb\.onversionchange\s*=\s*\(\)\s*=>\s*\{\s*_idb\.close\(\);\s*_idb = null;\s*\}/);
+  assert.match(src, /_chatIdb\.onversionchange\s*=\s*\(\)\s*=>\s*\{\s*_chatIdb\.close\(\);\s*_chatIdb = null;\s*\}/);
   assert.doesNotMatch(src, /db\.transaction\('chatSessions',\s*'readwrite'\)/);
 
   assert.match(read('course.html'), /course\.js\?v=\d+/);
@@ -174,7 +174,7 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
 
   assert.ok(materialScriptIndex > -1, 'course.html should load material-rag.js');
   assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
-  assert.match(src, /async function loadRetrievedMaterialContext\(query\)/);
+  assert.match(src, /async function loadRetrievedMaterialContext\(query,\s*provider\)/);
   assert.match(src, /async function loadSelectedMarkdownExcerptContext\(query\)/);
   assert.match(src, /function summarizeAvailableMaterialChoices\(chunks,\s*files\)/);
   assert.match(src, /await Promise\.all\(selectedMdFiles\.map\(f => ensureChunksForMaterial\(f\)\)\)/);
@@ -187,7 +187,7 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.match(src, /请先引导用户从上面的文件、章节或小节中选择/);
 
   const doSend = src.match(/async function doSend\(\) \{[\s\S]*?\n\}/)?.[0] || '';
-  assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
+  assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text,\s*aiProvider\)/);
   assert.match(doSend, /const fallbackMdCtx = mdCtx \? '' : await loadSelectedMarkdownExcerptContext\(text\)/);
   assert.match(doSend, /if \(mdCtx \|\| fallbackMdCtx\) apiContent = text \+ '\s*\\n\\n' \+ \(mdCtx \|\| fallbackMdCtx\)/);
   assert.doesNotMatch(doSend, /aiConversation\.length === 0/);
@@ -233,4 +233,44 @@ test('Saved AI answers become markdown materials with rendered preview support',
   assert.match(css, /\.text-edit-preview/);
   assert.equal((strings.match(/previewMarkdown:/g) || []).length, 3);
   assert.equal((strings.match(/editMarkdown:/g) || []).length, 3);
+});
+
+test('AI chat input keeps native Enter behavior and exposes click-only send copy', () => {
+  const src = read('course.js');
+  const html = read('course.html');
+  const strings = read('strings.js');
+
+  assert.doesNotMatch(src, /aiChatInput\.addEventListener\('keydown'/);
+  assert.doesNotMatch(src, /e\.key === 'Enter' && !e\.shiftKey/);
+  assert.doesNotMatch(html, /Enter 发送/);
+  assert.doesNotMatch(strings, /Enter to send/);
+  assert.doesNotMatch(strings, /Enter para enviar/);
+
+  assert.match(strings, /askAI:\s*'向 AI 助手提问…'/);
+  assert.match(strings, /askAI:\s*'Ask the AI assistant…'/);
+  assert.match(strings, /askAI:\s*'Pregunta al asistente IA…'/);
+  assert.match(strings, /aiInputHint:\s*'AI 可自动读取课程 Markdown 资料 · 点击发送按钮提交'/);
+  assert.match(strings, /aiInputHint:\s*'AI can read course Markdown materials · Click send to submit'/);
+  assert.match(strings, /aiInputHint:\s*'La IA puede leer materiales Markdown del curso · Haz clic en enviar'/);
+});
+
+test('AI streaming can be paused and restores the last prompt for editing', () => {
+  const src = read('course.js');
+  const css = read('course.css');
+  const strings = read('strings.js');
+
+  assert.match(src, /let aiLastPrompt\s*=\s*''/);
+  assert.match(src, /function setAISendButtonState\(\)/);
+  assert.match(src, /function pauseAIStreaming\(\)/);
+  assert.match(src, /aiAbortCtrl\.abort\(\)/);
+  assert.match(src, /aiChatInput\.value = aiLastPrompt/);
+  assert.match(src, /autoResizeInput\(\)/);
+  assert.match(src, /aiChatInput\.focus\(\)/);
+  assert.match(src, /aiConversation\.pop\(\)/);
+  assert.match(src, /aiChatSend\.addEventListener\('click', \(\) => \{\s*if \(aiStreaming\) \{\s*pauseAIStreaming\(\)/);
+  assert.match(src, /setAISendButtonState\(\)/);
+
+  assert.match(css, /\.ai-send-btn\.is-pausing/);
+  assert.equal((strings.match(/pauseAI:/g) || []).length, 3);
+  assert.equal((strings.match(/sendAI:/g) || []).length, 3);
 });

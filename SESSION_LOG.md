@@ -2,6 +2,20 @@
 
 > Canonical project session log. Entries are kept in reverse chronological order.
 
+## 2026-06-02
+
+### EXA-7 — AI 提问框提交行为与暂停生成
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `course.js`（v46→v48）, `course.html`, `course.css`, `strings.js`, `tests/p6-p8-regression.test.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`, `technical-reports/EXA-7-ai-prompt-pause.md`
+
+**修复**:
+- 取消 AI 输入框的 Enter 快捷提交处理，textarea 恢复默认换行行为；提交仅通过发送按钮触发。
+- 生成中发送按钮切换为暂停状态，调用现有 `AbortController` 中断流式请求。
+- 用户暂停后移除本次未完成对话轮次，并将上一条 prompt 自动恢复到输入框供继续编辑。
+- 更新三语输入提示与静态回归测试，覆盖点击提交、暂停生成和 prompt 恢复。
+
 ## 2026-05-31
 
 ### EXA-6 — 文档上传失败修复（服务端代理 + IndexedDB onversionchange 修复）
