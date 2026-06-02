@@ -4,6 +4,9 @@
   "outputDirectory": ".",
   "installCommand": null,
   "functions": {
+    "api/study-plan.js": {
+      "maxDuration": 60
+    },
     "api/upload-tmpfile.js": {
       "maxDuration": 60
     }

@@ -3,9 +3,9 @@
 > 📍 本文件是项目的实时状态快照。每次重要变更后更新。  
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
-**最后更新**: 2026-05-13
-**当前版本**: `course.js?v=46` / `material-rag.js?v=47` / `api/upload-tmpfile.js` EXA-6 fix
-**部署状态**: ✅ main 已推送，Vercel 自动部署中
+**最后更新**: 2026-06-02
+**当前版本**: `index.html` v48 / `course.js?v=46` / `material-rag.js?v=47` / `api/study-plan.js` EXA-9 fix
+**部署状态**: 本地修复完成，待 review 后推送部署
 
 ---
 
@@ -22,7 +22,7 @@
 | 章节完成度追踪                | ✅ 正常     |                                                                       |
 | 课程资料上传                 | ✅ 正常     |                                                                       |
 | PDF → Markdown（MinerU） | ✅ 正常     | 支持 > 199 页自动分片；单文件任务返回课程页后可恢复轮询                                       |
-| AI 学习助手（Gemini）        | ✅ 正常     | 模型链：gemini-3-flash-preview → gemini-2.5-flash                         |
+| AI 学习助手（Gemini）        | ✅ 正常     | EXA-9：`api/study-plan.js` 60s 函数时长；45s 上游超时；模型链 gemini-3-flash-preview → gemini-2.5-flash |
 | AI 可读资料选择              | ✅ 正常     | 助手顶部文件下拉选择器                                                           |
 | AI 教材片段检索              | ✅ 正常     | Markdown 教材自动分块；支持索引版本自动重建、目录标题跳转正文、裸编号习题识别、低置信度题号补充摘录，检索为空时按问题定位相关摘录 |
 | AI 回复保存为资料             | ✅ 正常     | 保存为 Markdown；资料查看支持 Markdown + KaTeX 预览                               |
@@ -47,6 +47,7 @@
 | 教材检索为本地规则检索，暂未接入 embedding 语义向量 | 低 | 可作为后续增强 |
 | course.js?v=N 版本号需手动递增 | 低 | 记录在 AGENT_GUIDELINES |
 | ~~PDF 分片拼合后内容大量丢失~~ | ~~高~~ | ✅ 已修复（P6）：ZIP 多 .md 文件全量拼接 + 截断上限 200 KB→10 MB |
+| ~~Gemini AI 提问页面显示 `Failed to fetch`~~ | ~~高~~ | ✅ 已修复（EXA-9）：延长 Vercel 函数时长，并为 Gemini 上游请求增加超时和降级链 |
 
 ---
 
@@ -63,9 +64,10 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-69b456f  feat: provider-aware material context — Gemini full doc, others section-level
-5bc0249  feat: add extractSectionFromMarkdown to material-rag.js (v47)
-a2ac32d  docs: plan provider-aware material context (P11, v47)
+本地待提交：
+- EXA-9: `api/study-plan.js` Gemini 流式提问增加 timeout-bounded fallback
+- EXA-9: `vercel.json` 为 `api/study-plan.js` 配置 `maxDuration: 60`
+- EXA-9: 回归测试与维护文档同步
 ```
 
 ---
@@ -99,6 +101,7 @@ a2ac32d  docs: plan provider-aware material context (P11, v47)
 | p9    | Demo 引导流程                 | v=37/v=38 | 线性代数 Demo 课程，10 步引导，预置章节和 2 份 Markdown 资料，支持 zh/en/es 与重置 |
 | P10   | RAG 结构化索引与习题级召回           | v=46      | sectionNo 仅从标题路径提取；查询归一化多形式章节写法；全文搜索公式/图编号降权              |
 | P11   | Provider-Aware 教材上下文策略    | v=47      | Gemini → 整本教材；其他 → 整节提取（`extractSectionFromMarkdown`）；fallback → chunk RAG |
+| EXA-9 | Gemini AI 提问网络错误修复        | API       | `study-plan` 函数 60s 时长；Gemini 上游 45s 超时；失败自动降级到备用模型 |
 |       |                           |           |                                                           |
 
 ### 待配置环境变量

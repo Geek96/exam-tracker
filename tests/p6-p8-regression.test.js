@@ -36,7 +36,7 @@ test('main course management header exposes a quiet build version label', () => 
   const html = read('index.html');
   const css = read('styles.css');
 
-  assert.match(html, /<span class="app-version"[^>]*>v44<\/span>/);
+  assert.match(html, /<span class="app-version"[^>]*>v\d+<\/span>/);
   assert.match(css, /\.app-version/);
   assert.match(css, /opacity:\s*0\.55/);
 });
@@ -142,8 +142,8 @@ test('Navigation storage fix avoids blocking the materials database upgrade path
 
   assert.match(src, /function getChatDB\(\)/);
   assert.match(src, /async function dbGetLegacySessions\(cid\)/);
-  assert.match(src, /_idb\.onversionchange\s*=\s*\(\)\s*=>\s*_idb\.close\(\)/);
-  assert.match(src, /_chatIdb\.onversionchange\s*=\s*\(\)\s*=>\s*_chatIdb\.close\(\)/);
+  assert.match(src, /_idb\.onversionchange\s*=\s*\(\)\s*=>\s*\{[^}]*_idb\.close\(\)/);
+  assert.match(src, /_chatIdb\.onversionchange\s*=\s*\(\)\s*=>\s*\{[^}]*_chatIdb\.close\(\)/);
   assert.doesNotMatch(src, /db\.transaction\('chatSessions',\s*'readwrite'\)/);
 
   assert.match(read('course.html'), /course\.js\?v=\d+/);
@@ -174,7 +174,7 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
 
   assert.ok(materialScriptIndex > -1, 'course.html should load material-rag.js');
   assert.ok(courseScriptIndex > materialScriptIndex, 'material-rag.js must load before course.js');
-  assert.match(src, /async function loadRetrievedMaterialContext\(query\)/);
+  assert.match(src, /async function loadRetrievedMaterialContext\(query,\s*provider\)/);
   assert.match(src, /async function loadSelectedMarkdownExcerptContext\(query\)/);
   assert.match(src, /function summarizeAvailableMaterialChoices\(chunks,\s*files\)/);
   assert.match(src, /await Promise\.all\(selectedMdFiles\.map\(f => ensureChunksForMaterial\(f\)\)\)/);
@@ -187,7 +187,7 @@ test('AI free-form chat retrieves relevant material chunks on every turn', () =>
   assert.match(src, /请先引导用户从上面的文件、章节或小节中选择/);
 
   const doSend = src.match(/async function doSend\(\) \{[\s\S]*?\n\}/)?.[0] || '';
-  assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text\)/);
+  assert.match(doSend, /const mdCtx = await loadRetrievedMaterialContext\(text,\s*aiProvider\)/);
   assert.match(doSend, /const fallbackMdCtx = mdCtx \? '' : await loadSelectedMarkdownExcerptContext\(text\)/);
   assert.match(doSend, /if \(mdCtx \|\| fallbackMdCtx\) apiContent = text \+ '\s*\\n\\n' \+ \(mdCtx \|\| fallbackMdCtx\)/);
   assert.doesNotMatch(doSend, /aiConversation\.length === 0/);
@@ -210,6 +210,21 @@ test('AI system prompt acknowledges injected local markdown materials', () => {
   assert.match(api, /不得声称自己无法访问已选课程资料/);
   assert.match(api, /如果用户消息说明“RAG 未命中”/);
   assert.match(api, /引导用户从可检索到的文件、章节或小节中选择/);
+});
+
+test('Gemini study-plan uses a timeout-bounded fallback model chain', () => {
+  const api = read('api/study-plan.js');
+  const vercel = JSON.parse(read('vercel.json'));
+
+  assert.match(api, /const GEMINI_MODELS = \[/);
+  assert.match(api, /id:\s*'gemini-3-flash-preview'/);
+  assert.match(api, /id:\s*'gemini-2\.5-flash'/);
+  assert.match(api, /async function callGeminiStream\(apiKey,\s*model,\s*system,\s*messages\)/);
+  assert.match(api, /AbortSignal\.timeout\(45000\)/);
+  assert.match(api, /for \(var i = 0; i < GEMINI_MODELS\.length; i\+\+\)/);
+  assert.match(api, /await streamSSE\(upstream\.body,\s*res,/);
+
+  assert.equal(vercel.functions['api/study-plan.js'].maxDuration, 60);
 });
 
 test('Saved AI answers become markdown materials with rendered preview support', () => {

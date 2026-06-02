@@ -1,3 +1,8 @@
+const GEMINI_MODELS = [
+  { id: 'gemini-3-flash-preview', api: 'v1beta' },
+  { id: 'gemini-2.5-flash', api: 'v1beta' },
+];
+
 async function handler(req, res) {
   if (req.method !== 'POST') { res.status(405).end('Method Not Allowed'); return; }
 
@@ -136,32 +141,22 @@ async function handleGemini(system, messages, res) {
   var apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) { res.status(500).json({ error: 'GEMINI_API_KEY 未在 Vercel 环境变量中配置' }); return; }
 
-  var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:streamGenerateContent?alt=sse&key=' + apiKey;
+  var errs = [];
+  var upstream = null;
 
-  var contents = messages.map(function(m) {
-    return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
-  });
-
-  var upstream;
-  try {
-    upstream = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system }] },
-        contents: contents,
-        generationConfig: { maxOutputTokens: 4096 },
-      }),
-    });
-  } catch (err) {
-    res.status(502).json({ error: '无法连接 Gemini：' + err.message }); return;
+  for (var i = 0; i < GEMINI_MODELS.length; i++) {
+    var model = GEMINI_MODELS[i];
+    try {
+      upstream = await callGeminiStream(apiKey, model, system, messages);
+      break;
+    } catch (err) {
+      errs.push('[' + model.id + '] ' + err.message);
+    }
   }
 
-  if (!upstream.ok) {
-    var raw = await upstream.text();
-    var msg = raw;
-    try { msg = JSON.parse(raw).error.message || raw; } catch {}
-    res.status(upstream.status).json({ error: msg }); return;
+  if (!upstream) {
+    res.status(502).json({ error: 'Gemini 调用失败（所有模型均失败）：\n' + errs.join('\n') });
+    return;
   }
 
   await streamSSE(upstream.body, res, function(line) {
@@ -173,6 +168,35 @@ async function handleGemini(system, messages, res) {
       }
     } catch {}
   });
+}
+
+async function callGeminiStream(apiKey, model, system, messages) {
+  var url = 'https://generativelanguage.googleapis.com/' + model.api +
+    '/models/' + model.id + ':streamGenerateContent?alt=sse&key=' + apiKey;
+
+  var contents = messages.map(function(m) {
+    return { role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] };
+  });
+
+  var upstream = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(45000),
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: system }] },
+      contents: contents,
+      generationConfig: { maxOutputTokens: 4096 },
+    }),
+  });
+
+  if (!upstream.ok) {
+    var raw = await upstream.text();
+    var msg = raw;
+    try { msg = JSON.parse(raw).error.message || raw; } catch {}
+    throw new Error('Gemini 错误 (' + upstream.status + ')：' + msg);
+  }
+
+  return upstream;
 }
 
 async function streamSSE(body, res, extractText) {
