@@ -1925,6 +1925,7 @@ matDropZone.addEventListener('drop', async e => {
 // ══════════════════════════════════════════════════════════════════════════════
 const aiChatMessages = document.getElementById('aiChatMessages');
 const aiChatInput    = document.getElementById('aiChatInput');
+const aiChatSend     = document.getElementById('aiChatSend');
 const aiDaysLeft     = document.getElementById('aiDaysLeft');
 const aiHoursPerDay  = document.getElementById('aiHoursPerDay');
 const aiReviewGuide  = document.getElementById('aiReviewGuide');
@@ -1933,6 +1934,7 @@ let aiGuideContent = '';
 let aiProvider   = 'gemini';
 let aiConversation = [];
 let aiStreaming   = false;
+let aiLastPrompt  = '';
 
 // Pre-fill days from exam date
 (function() {
@@ -2049,6 +2051,27 @@ function renderHistoryPanel() {
     item.addEventListener('click', () => { sessSwitch(s.id); });
     list.appendChild(item);
   }
+}
+
+function setAISendButtonState() {
+  if (!aiChatSend) return;
+  aiChatSend.disabled = false;
+  aiChatSend.classList.toggle('is-pausing', aiStreaming);
+  aiChatSend.textContent = aiStreaming ? '⏸' : '↑';
+  aiChatSend.title = aiStreaming ? window.t('pauseAI') : window.t('sendAI');
+  aiChatSend.setAttribute('aria-label', aiChatSend.title);
+}
+
+function restoreLastPromptForEdit() {
+  aiChatInput.disabled = false;
+  aiChatInput.value = aiLastPrompt;
+  autoResizeInput();
+  aiChatInput.focus();
+}
+
+function pauseAIStreaming() {
+  if (!aiStreaming || !aiAbortCtrl) return;
+  aiAbortCtrl.abort();
 }
 
 // Init sessions (async: loads from IndexedDB, migrates from localStorage if needed)
@@ -2555,13 +2578,15 @@ ${reviewGuide || '（未提供）'}`;
 async function sendAIMsg(userText, displayLabel, apiContent) {
   if (aiStreaming) return;
   aiStreaming = true;
+  aiLastPrompt = displayLabel || userText;
+  setAISendButtonState();
 
   // Hide welcome state on first message
   const welcome = document.getElementById('aiWelcomeState');
   if (welcome) welcome.style.display = 'none';
 
   aiChatInput.disabled = true;
-  document.getElementById('aiChatSend').disabled = true;
+  setAISendButtonState();
 
   aiConversation.push({ role: 'user', content: userText, display: displayLabel || userText });
   sessPersist();
@@ -2652,14 +2677,22 @@ async function sendAIMsg(userText, displayLabel, apiContent) {
     aiMsgEl.appendChild(saveBtn);
 
   } catch (err) {
-    if (err.name === 'AbortError') { aiConversation.pop(); return; }
+    if (err.name === 'AbortError') {
+      aiConversation.pop();
+      sessPersist();
+      userEl.remove();
+      aiMsgEl.remove();
+      restoreLastPromptForEdit();
+      if (!aiConversation.length && welcome) welcome.style.display = '';
+      return;
+    }
     bubble.innerHTML = `<div class="ai-error">网络错误：${escHtml(err.message)}</div>`;
     aiConversation.pop();
   } finally {
     aiStreaming = false;
     aiAbortCtrl = null;
     aiChatInput.disabled = false;
-    document.getElementById('aiChatSend').disabled = false;
+    setAISendButtonState();
     aiChatMessages.scrollTop = aiChatMessages.scrollHeight;
   }
 }
@@ -2678,10 +2711,14 @@ async function doSend() {
   if (mdCtx || fallbackMdCtx) apiContent = text + '\n\n' + (mdCtx || fallbackMdCtx);
   await sendAIMsg(text, text, apiContent);
 }
-document.getElementById('aiChatSend').addEventListener('click', doSend);
-aiChatInput.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); doSend(); }
+aiChatSend.addEventListener('click', () => {
+  if (aiStreaming) {
+    pauseAIStreaming();
+    return;
+  }
+  doSend();
 });
+setAISendButtonState();
 
 // Auto-resize textarea
 function autoResizeInput() {
