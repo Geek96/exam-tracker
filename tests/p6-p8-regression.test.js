@@ -36,7 +36,7 @@ test('main course management header exposes a quiet build version label', () => 
   const html = read('index.html');
   const css = read('styles.css');
 
-  assert.match(html, /<span class="app-version"[^>]*>v48<\/span>/);
+  assert.match(html, /<span class="app-version"[^>]*>v49<\/span>/);
   assert.match(css, /\.app-version/);
   assert.match(css, /opacity:\s*0\.55/);
 });
@@ -273,4 +273,30 @@ test('AI streaming can be paused and restores the last prompt for editing', () =
   assert.match(css, /\.ai-send-btn\.is-pausing/);
   assert.equal((strings.match(/pauseAI:/g) || []).length, 3);
   assert.equal((strings.match(/sendAI:/g) || []).length, 3);
+});
+
+test('EXA-10 material import labels and MinerU float prompts are updated', () => {
+  const src = read('course.js');
+  const html = read('course.html');
+  const css = read('course.css');
+  const strings = read('strings.js');
+
+  assert.match(html, /data-i18n="pdfConvert">导入 PDF<\/label>/);
+  assert.match(html, /data-i18n="htmlConvert"[\s\S]*>导入 HTML<\/label>/);
+  assert.match(html, /course\.js\?v=49/);
+
+  assert.match(strings, /pdfConvert:\s*'导入 PDF'/);
+  assert.match(strings, /htmlConvert:\s*'导入 HTML'/);
+  assert.match(strings, /pdfConvert:\s*'Import PDF'/);
+  assert.match(strings, /htmlConvert:\s*'Import HTML'/);
+  assert.match(strings, /pdfConvert:\s*'Importar PDF'/);
+  assert.match(strings, /htmlConvert:\s*'Importar HTML'/);
+
+  assert.match(css, /#mineruFloat\s*\{[\s\S]*left:\s*24px;[\s\S]*bottom:\s*24px;/);
+  assert.doesNotMatch(css, /#mineruFloat\s*\{[\s\S]*top:\s*16px;[\s\S]*right:\s*24px;/);
+  assert.match(src, /function materialConvertStatus\(fileType,\s*phase\)/);
+  assert.match(src, /正在上传pdf/);
+  assert.match(src, /正在上传html/);
+  assert.match(src, /正在转换为md文档。转换时间可能较长,请耐心等待/);
+  assert.match(src, /return '转换完成!'/);
 });

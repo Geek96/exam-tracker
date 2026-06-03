@@ -385,9 +385,22 @@ let mineruPollTimer = null;
 let mineruContent = null;
 let currentTocJobId = null;
 
-// ── MinerU Job Manager (floats at top-right) ───────────────────────────────────
+// ── MinerU Job Manager (floats at bottom-left) ─────────────────────────────────
 let mjSeq = 0;
 const mjJobs = new Map();
+
+function materialConvertStatus(fileType, phase) {
+  if (phase === 'upload') {
+    const uploading = fileType === 'html' ? '正在上传html' : '正在上传pdf';
+    return `${uploading}。转换时间可能较长,请耐心等待`;
+  }
+  if (phase === 'convert') return '正在转换为md文档。转换时间可能较长,请耐心等待';
+  return '转换完成!';
+}
+
+function materialConvertStatusFromMineruMsg(fileType, msg) {
+  return materialConvertStatus(fileType, msg.includes('上传') ? 'upload' : 'convert');
+}
 
 function mjCreate(label, type) {
   const id = 'mj' + (++mjSeq);
@@ -1844,13 +1857,16 @@ async function startMaterialMineruJob(file, fileType) {
 
   try {
     const buf = await file.arrayBuffer();
-    mjUpdate(jobId, { step: 1, status: '正在分析…' });
+    mjUpdate(jobId, { step: 1, status: materialConvertStatus(fileType, 'upload') });
 
     let combinedMarkdown;
     if (isHtml) {
       combinedMarkdown = await mineruSubmitAndPoll(
         buf, file.name, 'html',
-        msg => mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: msg }),
+        msg => mjUpdate(jobId, {
+          step: msg.includes('上传') ? 1 : 2,
+          status: materialConvertStatusFromMineruMsg(fileType, msg),
+        }),
         isCancelled,
         onTaskIdReady
       );
@@ -1863,8 +1879,11 @@ async function startMaterialMineruJob(file, fileType) {
         return mineruSubmitAndPoll(chunk, chunkName, 'pdf',
           msg => {
             chunkStatus[i] = msg;
-            const summary = total > 1 ? chunkStatus.map((s, j) => `[${j+1}] ${s}`).join('  ') : msg;
-            mjUpdate(jobId, { step: msg.includes('上传') ? 1 : 2, status: summary });
+            const phase = msg.includes('上传') ? 'upload' : 'convert';
+            const summary = total > 1
+              ? chunkStatus.map((s, j) => `[${j+1}] ${s === '等待中' ? s : materialConvertStatusFromMineruMsg(fileType, s)}`).join('  ')
+              : materialConvertStatus(fileType, phase);
+            mjUpdate(jobId, { step: phase === 'upload' ? 1 : 2, status: summary });
           },
           isCancelled,
           total === 1 ? onTaskIdReady : null
@@ -1873,10 +1892,10 @@ async function startMaterialMineruJob(file, fileType) {
       combinedMarkdown = markdowns.join('\n\n');
     }
 
-    mjUpdate(jobId, { step: 3, status: '正在保存…' });
+    mjUpdate(jobId, { step: 3, status: materialConvertStatus(fileType, 'done') });
     await saveMdAsMaterial(combinedMarkdown, mdName);
     if (_activeTaskId) removePendingMinerUTask(_activeTaskId);
-    mjUpdate(jobId, { done: true, status: `✅ 已保存为 ${mdName}` });
+    mjUpdate(jobId, { done: true, status: materialConvertStatus(fileType, 'done') });
     setTimeout(() => { mjJobs.delete(jobId); mjRender(); }, 5000);
 
   } catch (err) {

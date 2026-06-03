@@ -2,6 +2,20 @@
 
 > Canonical project session log. Entries are kept in reverse chronological order.
 
+## 2026-06-03
+
+### EXA-10 — 课程资料导入文案与转换提示调整
+
+**操作者**: Codex (GPT-5)
+
+**涉及文件**: `course.js`（v48→v49）, `course.html`, `course.css`, `strings.js`, `index.html`, `tests/p6-p8-regression.test.js`, `STATUS.md`, `ROADMAP.md`, `.agents/AGENT_GUIDELINES.md`, `technical-reports/EXA-10-material-import-prompts.md`
+
+**修复**:
+- 将课程资料右侧按钮从“PDF 转换 / HTML 转换”改为“导入 PDF / 导入 HTML”，并同步 zh/en/es 三语文案。
+- 将 MinerU 转换任务悬浮框默认位置从右上角改为左下角，保留拖拽调整能力。
+- 课程资料转换任务改为三阶段提示：上传阶段提示正在上传对应文件类型，转换阶段提示正在转换为 md 文档，完成阶段提示“转换完成!”；前两阶段附加“转换时间可能较长,请耐心等待”。
+- 更新 `course.js?v=49`、首页版本标记与静态回归测试。
+
 ## 2026-06-02
 
 ### EXA-7 — AI 提问框提交行为与暂停生成

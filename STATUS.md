@@ -3,8 +3,8 @@
 > 📍 本文件是项目的实时状态快照。每次重要变更后更新。  
 > AI Agent 在开始任务前应先读本文件，了解当前状态与已知问题。
 
-**最后更新**: 2026-06-02
-**当前版本**: `course.js?v=48` / `material-rag.js?v=47` / `api/upload-tmpfile.js` EXA-6 fix
+**最后更新**: 2026-06-03
+**当前版本**: `course.js?v=49` / `material-rag.js?v=47` / EXA-10 课程资料导入文案与转换提示
 **部署状态**: ✅ main 已推送，Vercel 自动部署中
 
 ---
@@ -21,7 +21,7 @@
 | 章节目录（手动添加）             | ✅ 正常     |                                                                       |
 | 章节完成度追踪                | ✅ 正常     |                                                                       |
 | 课程资料上传                 | ✅ 正常     |                                                                       |
-| PDF → Markdown（MinerU） | ✅ 正常     | 支持 > 199 页自动分片；单文件任务返回课程页后可恢复轮询                                       |
+| PDF / HTML → Markdown（MinerU） | ✅ 正常     | 课程资料入口文案为导入 PDF / HTML；转换任务浮层默认左下角，按上传、转换、完成三阶段提示                                       |
 | AI 学习助手（Gemini）        | ✅ 正常     | 模型链：gemini-3-flash-preview → gemini-2.5-flash；输入框默认回车换行，点击发送；生成中可暂停并编辑上一条 prompt |
 | AI 可读资料选择              | ✅ 正常     | 助手顶部文件下拉选择器                                                           |
 | AI 教材片段检索              | ✅ 正常     | Markdown 教材自动分块；支持索引版本自动重建、目录标题跳转正文、裸编号习题识别、低置信度题号补充摘录，检索为空时按问题定位相关摘录 |
@@ -63,9 +63,10 @@
 ## 近期变更（最新 3 次提交）
 
 ```
-69b456f  feat: provider-aware material context — Gemini full doc, others section-level
-5bc0249  feat: add extractSectionFromMarkdown to material-rag.js (v47)
-a2ac32d  docs: plan provider-aware material context (P11, v47)
+本地工作区：
+- EXA-10：课程资料右侧按钮改为“导入 PDF / 导入 HTML”
+- EXA-10：MinerU 转换任务浮层默认左下角，并显示“正在上传pdf/html”“正在转换为md文档”“转换完成!”三阶段提示
+- EXA-10：同步 `course.js?v=49`、首页版本标记和静态回归测试
 ```
 
 ---

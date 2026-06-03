@@ -101,12 +101,12 @@
         <div class="materials-section-inline">
           <div class="materials-toolbar-inline">
             <h3 class="materials-title-sm" data-i18n="courseMaterials">课程资料</h3>
-            <label class="btn-sm accent materials-upload-btn" for="materialFileInput" data-i18n="pdfConvert">PDF 转换</label>
+            <label class="btn-sm accent materials-upload-btn" for="materialFileInput" data-i18n="pdfConvert">导入 PDF</label>
             <input type="file" id="materialFileInput" multiple
               accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.md,.png,.jpg,.jpeg,.webp" style="display:none" />
             <label class="btn-sm materials-upload-btn materials-html-btn" for="materialHtmlInput"
               data-i18n="htmlConvert" data-i18n-title="htmlConvertTitle"
-              title="上传 HTML 文件，通过 MinerU 转换为 Markdown">HTML 转换</label>
+              title="上传 HTML 文件，通过 MinerU 转换为 Markdown">导入 HTML</label>
             <input type="file" id="materialHtmlInput" multiple accept=".html,.htm" style="display:none" />
           </div>
           <div class="materials-drop-zone materials-drop-inline" id="materialsDropZone">
@@ -550,7 +550,7 @@
     </div>
   </div>
 
-  <!-- Floating MinerU job tracker (fixed top-right) -->
+  <!-- Floating MinerU job tracker (fixed bottom-left) -->
   <div id="mineruFloat" style="display:none">
     <div class="mf-badge" id="mfBadge">
       <div class="mf-steps-mini">
@@ -610,6 +610,6 @@
   <script src="strings.js"></script>
   <script src="material-rag.js?v=47"></script>
   <script src="demo-tour.js"></script>
-  <script src="course.js?v=48"></script>
+  <script src="course.js?v=49"></script>
 </body>
 </html>
